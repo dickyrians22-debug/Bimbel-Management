@@ -1,0 +1,8 @@
+{
+  "name": "Remix Bimbel Sigma - LMS \u0026 OMS",
+  "description": "Sistem Manajemen Bimbingan Belajar (Bimbel Sigma) full-stack berbasis web dengan Multi-Role Access (Owner, Tutor, Siswa), Full CRUD Database Siswa, Presensi Digital, Rekap Cetak Kartu 1/4 A4, Kas Masuk/Keluar Accrual, Laporan P\u0026L Tahunan 12 Bulan, serta Pusat Pengaturan Akun \u0026 Kategori Operasional.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

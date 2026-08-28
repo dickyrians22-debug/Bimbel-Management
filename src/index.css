@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+  h1, h2, h3, h4, .font-heading {
+    font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+}
+
+/* Custom Print Rules for Bimbel Sigma (Mode A 1-Siswa & Mode B Kelas Kelompok) */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 6mm;
+  }
+
+  body {
+    background-color: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print, nav, aside, header, .no-print-area {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  /* Mode A & Mode B full A4 sheets */
+  #printable-report-mode-a,
+  #printable-group-sheet {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    page-break-after: auto;
+  }
+
+  table {
+    page-break-inside: auto !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto;
+  }
+
+  /* Single 1/4 A4 Pocket Card (A6 size: 105mm x 148mm) */
+  .quarter-single-card {
+    width: 105mm !important;
+    max-width: 105mm !important;
+    height: 148mm !important;
+    max-height: 148mm !important;
+    margin: 0 auto !important;
+    padding: 10px !important;
+    font-size: 10px !important;
+    border: 1.5px dashed #334155 !important;
+    border-radius: 8px !important;
+    page-break-inside: avoid !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    background: white !important;
+  }
+
+  /* Full A4 Page container for 1/4 pocket cards */
+  .a4-page-grid {
+    width: 210mm !important;
+    min-height: 297mm !important;
+    margin: 0 auto !important;
+    padding: 4mm !important;
+    box-sizing: border-box !important;
+    page-break-after: always;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-rows: repeat(2, 1fr) !important;
+    gap: 4mm !important;
+  }
+
+  .quarter-card {
+    border: 1.5px dashed #475569 !important;
+    border-radius: 6px !important;
+    padding: 8px !important;
+    font-size: 10px !important;
+    page-break-inside: avoid !important;
+    height: 138mm !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
