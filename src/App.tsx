@@ -57,6 +57,7 @@ import {
   deleteDocFromFirestore,
   batchSeedToFirestore,
   replaceAllInCollection,
+  clearFirestoreCollection,
   checkCollectionCount,
   COLLECTIONS,
 } from './lib/firebase';
@@ -239,38 +240,23 @@ export default function App() {
   useEffect(() => {
     const unsubs: Array<() => void> = [];
 
-    // Auto-seed cloud if database is fresh/empty or needs update with 25 real students
+    // Auto-seed cloud if database is fresh/empty
     const checkAndSeedCloud = async () => {
       try {
         const usersCount = await checkCollectionCount(COLLECTIONS.USERS);
         if (usersCount === 0) {
-          console.log('Seeding initial dataset to Firestore...');
+          console.log('Seeding essential accounts and students to Firestore...');
           await batchSeedToFirestore(COLLECTIONS.USERS, DEFAULT_ACCOUNTS);
           await batchSeedToFirestore(COLLECTIONS.STUDENTS, INITIAL_STUDENTS);
-          await batchSeedToFirestore(COLLECTIONS.ATTENDANCE, INITIAL_ATTENDANCE);
-          await batchSeedToFirestore(COLLECTIONS.INCOMES, INITIAL_INCOMES);
-          await batchSeedToFirestore(
-            COLLECTIONS.EXPENSES,
-            INITIAL_EXPENSES.map((e) => ({
-              ...e,
-              title: (e as any).title || (e as any).description || 'Pengeluaran Operasional',
-              paidTo: (e as any).paidTo || (e as any).recipient || '-',
-            }))
-          );
           await syncDocToFirestore(COLLECTIONS.SETTINGS, 'default', { id: 'default', ...DEFAULT_SETTINGS });
-          console.log('Firestore seed completed successfully.');
+          console.log('Firestore essential seed completed.');
         } else {
-          // If Firestore contains fewer than 25 students or old mock data, update with all 25 students from list
+          // If Firestore contains fewer than 25 students or old mock data, update with student list and user accounts
           const studentCount = await checkCollectionCount(COLLECTIONS.STUDENTS);
           if (studentCount < 25) {
             console.log('Updating Firestore with 25 students from bimbel list...');
             await replaceAllInCollection(COLLECTIONS.STUDENTS, INITIAL_STUDENTS);
             await replaceAllInCollection(COLLECTIONS.USERS, DEFAULT_ACCOUNTS);
-          }
-          const attendanceCount = await checkCollectionCount(COLLECTIONS.ATTENDANCE);
-          if (attendanceCount < 100) {
-            console.log('Updating Firestore with full PDF attendance records...');
-            await replaceAllInCollection(COLLECTIONS.ATTENDANCE, INITIAL_ATTENDANCE);
           }
         }
       } catch (e) {
@@ -284,10 +270,8 @@ export default function App() {
     const unsubStudents = subscribeToCollection<Student>(
       COLLECTIONS.STUDENTS,
       (cloudData) => {
-        if (cloudData.length > 0) {
-          setStudents(cloudData);
-          saveStudents(cloudData);
-        }
+        setStudents(cloudData);
+        saveStudents(cloudData);
         setIsCloudConnected(true);
       },
       () => setIsCloudConnected(false)
@@ -298,10 +282,8 @@ export default function App() {
     const unsubAttendance = subscribeToCollection<AttendanceRecord>(
       COLLECTIONS.ATTENDANCE,
       (cloudData) => {
-        if (cloudData.length > 0) {
-          setAttendance(cloudData);
-          saveAttendance(cloudData);
-        }
+        setAttendance(cloudData);
+        saveAttendance(cloudData);
         setIsCloudConnected(true);
       },
       () => setIsCloudConnected(false)
@@ -312,15 +294,13 @@ export default function App() {
     const unsubIncomes = subscribeToCollection<IncomeRecord>(
       COLLECTIONS.INCOMES,
       (cloudData) => {
-        if (cloudData.length > 0) {
-          const { sanitized, hasChanges } = sanitizeAndHarmonizeIncomes(cloudData, settings);
-          setIncomes(sanitized);
-          saveIncomes(sanitized);
-          if (hasChanges) {
-            sanitized.forEach((inc) => {
-              syncDocToFirestore(COLLECTIONS.INCOMES, inc.id, inc).catch(console.error);
-            });
-          }
+        const { sanitized, hasChanges } = sanitizeAndHarmonizeIncomes(cloudData, settings);
+        setIncomes(sanitized);
+        saveIncomes(sanitized);
+        if (hasChanges && sanitized.length > 0) {
+          sanitized.forEach((inc) => {
+            syncDocToFirestore(COLLECTIONS.INCOMES, inc.id, inc).catch(console.error);
+          });
         }
         setIsCloudConnected(true);
       },
@@ -332,15 +312,13 @@ export default function App() {
     const unsubExpenses = subscribeToCollection<ExpenseRecord>(
       COLLECTIONS.EXPENSES,
       (cloudData) => {
-        if (cloudData.length > 0) {
-          const { sanitized, hasChanges } = sanitizeAndHarmonizeExpenses(cloudData, settings);
-          setExpenses(sanitized);
-          saveExpenses(sanitized);
-          if (hasChanges) {
-            sanitized.forEach((exp) => {
-              syncDocToFirestore(COLLECTIONS.EXPENSES, exp.id, exp).catch(console.error);
-            });
-          }
+        const { sanitized, hasChanges } = sanitizeAndHarmonizeExpenses(cloudData, settings);
+        setExpenses(sanitized);
+        saveExpenses(sanitized);
+        if (hasChanges && sanitized.length > 0) {
+          sanitized.forEach((exp) => {
+            syncDocToFirestore(COLLECTIONS.EXPENSES, exp.id, exp).catch(console.error);
+          });
         }
         setIsCloudConnected(true);
       },
@@ -1167,17 +1145,17 @@ export default function App() {
     setSettings(data.settings);
 
     try {
-      await batchSeedToFirestore(COLLECTIONS.USERS, data.users);
-      await batchSeedToFirestore(COLLECTIONS.STUDENTS, data.students);
-      await batchSeedToFirestore(COLLECTIONS.ATTENDANCE, data.attendance);
-      await batchSeedToFirestore(COLLECTIONS.INCOMES, data.incomes);
-      await batchSeedToFirestore(COLLECTIONS.EXPENSES, data.expenses);
+      await replaceAllInCollection(COLLECTIONS.USERS, data.users);
+      await replaceAllInCollection(COLLECTIONS.STUDENTS, data.students);
+      await clearFirestoreCollection(COLLECTIONS.ATTENDANCE);
+      await clearFirestoreCollection(COLLECTIONS.INCOMES);
+      await clearFirestoreCollection(COLLECTIONS.EXPENSES);
       await syncDocToFirestore(COLLECTIONS.SETTINGS, 'default', { id: 'default', ...data.settings });
     } catch (e) {
       console.warn('Reset cloud seed error:', e);
     }
 
-    showToast('Seluruh data berhasil di-reset ke pengaturan awal demo.');
+    showToast('Seluruh data demo transaksi & presensi berhasil dibersihkan.');
   };
 
   const handleImportFullData = async (data: {

@@ -190,6 +190,27 @@ export async function replaceAllInCollection(
 }
 
 /**
+ * Clear all documents in a Firestore collection
+ */
+export async function clearFirestoreCollection(collectionName: string): Promise<void> {
+  if (!db) return;
+  try {
+    const colRef = collection(db, collectionName);
+    const existingSnap = await getDocs(colRef);
+    if (existingSnap.empty) return;
+    
+    const deleteBatch = writeBatch(db);
+    existingSnap.forEach((docSnap) => {
+      deleteBatch.delete(docSnap.ref);
+    });
+    await deleteBatch.commit();
+  } catch (error) {
+    console.error(`Error clearing collection ${collectionName}:`, error);
+    throw error;
+  }
+}
+
+/**
  * Check if collection has documents in Firestore
  */
 export async function checkCollectionCount(collectionName: string): Promise<number> {

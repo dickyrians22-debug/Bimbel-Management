@@ -20,9 +20,9 @@ import {
 
 const KEYS = {
   STUDENTS: 'bimbel_sigma_students_v3',
-  ATTENDANCE: 'bimbel_sigma_attendance_v5',
-  INCOMES: 'bimbel_sigma_incomes_v2',
-  EXPENSES: 'bimbel_sigma_expenses_v2',
+  ATTENDANCE: 'bimbel_sigma_attendance_v6',
+  INCOMES: 'bimbel_sigma_incomes_v3',
+  EXPENSES: 'bimbel_sigma_expenses_v3',
   AUTH: 'bimbel_sigma_auth_v3',
   USERS: 'bimbel_sigma_users_v3',
   SETTINGS: 'bimbel_sigma_settings_v2',
