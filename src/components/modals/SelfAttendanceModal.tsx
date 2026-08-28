@@ -48,13 +48,6 @@ export const SelfAttendanceModal: React.FC<SelfAttendanceModalProps> = ({
       list.push({ id: t.id, name: t.name, role: 'Tutor' });
     });
 
-    if (list.length === 0) {
-      list.push(
-        { id: 't-1', name: 'Kak Sarah Amalia, S.Si.', role: 'Tutor' },
-        { id: 't-2', name: 'Kak Dimas Pratama, M.Pd.', role: 'Tutor' }
-      );
-    }
-
     return list;
   }, [users]);
 

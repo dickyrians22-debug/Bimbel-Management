@@ -260,11 +260,14 @@ export const SalaryView: React.FC<SalaryViewProps> = ({
       }
     });
 
-    if (list.length === 0) {
-      list.push(
-        { id: 'usr-tutor-1', name: 'Kak Sarah Amalia, S.Si.', username: 'tutor', specialty: 'MIPA SMP/SMA' },
-        { id: 'usr-tutor-2', name: 'Kak Dimas Pratama, M.Pd.', username: 'dimas', specialty: 'SD & Calistung' }
-      );
+    if (list.length === 0 && currentUser?.role === 'tutor') {
+      list.push({
+        id: currentUser.id || 'usr-tutor-1',
+        name: currentUser.name,
+        username: currentUser.username,
+        specialty: currentUser.specialty || 'Tutor Pengajar',
+        avatar: currentUser.avatar,
+      });
     }
 
     // If logged in as Tutor, only keep current tutor
@@ -548,7 +551,7 @@ export const SalaryView: React.FC<SalaryViewProps> = ({
       tutorId: payModalTutor.tutorId,
       tutorName: payModalTutor.tutorName,
       paymentMethod: payPaymentMethod,
-      approvedBy: settings.ownerName || 'Budi Santoso, S.Pd.',
+      approvedBy: settings.ownerName || 'Pimpinan Bimbel',
       notes: payNotes,
     };
 
@@ -1414,7 +1417,7 @@ export const SalaryView: React.FC<SalaryViewProps> = ({
                     Bendahara / Pimpinan Bimbel,
                   </p>
                   <p className="font-bold text-slate-900 underline">
-                    {settings.ownerName || 'Budi Santoso, S.Pd.'}
+                    {settings.ownerName || 'Pimpinan Bimbel'}
                   </p>
                   <p className="text-[10px] text-slate-400">
                     {settings.ownerTitle || 'Direktur Lembaga'}

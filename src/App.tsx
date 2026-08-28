@@ -806,7 +806,7 @@ export default function App() {
       paymentMethod: paymentData.paymentMethod,
       receiptNumber: receiptNum,
       notes: paymentData.notes || `Pembayaran Iuran Les Periode ${getMonthNameIndo(paymentData.month)} ${paymentData.year} (${paymentData.sessionsCount} Sesi)`,
-      receivedBy: currentUser?.name || settings.ownerName || 'Budi Santoso, S.Pd.',
+      receivedBy: currentUser?.name || settings.ownerName || 'Petugas Kasir',
       createdAt: new Date().toISOString(),
     };
 

@@ -319,9 +319,9 @@ export const PrintCardsView: React.FC<PrintCardsViewProps> = ({
 
   const bimbelName = settings?.bimbelName || 'BIMBEL SIGMA';
   const bimbelTagline = settings?.tagline || 'Belajar Sampai Paham, Bukan Sekadar Hafal';
-  const bimbelAddress = settings?.address || 'Jl. Pendidikan No. 45, Kota Belajar';
-  const bimbelPhone = settings?.phone || '0812-3456-7890';
-  const ownerName = settings?.ownerName || 'Budi Santoso, S.Pd.';
+  const bimbelAddress = settings?.address || 'Alamat Lembaga Bimbel';
+  const bimbelPhone = settings?.phone || '-';
+  const ownerName = settings?.ownerName || 'Pimpinan Lembaga';
 
   // Handle Send Student Report via WhatsApp
   const handleSendStudentReportWhatsApp = () => {

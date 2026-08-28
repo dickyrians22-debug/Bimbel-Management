@@ -61,8 +61,8 @@ export function calculateStudentUnpaidBill(
   incomesList: IncomeRecord[] = [],
   bimbelSettings?: BimbelSettings | null,
   excludeIncomeId?: string
-): { totalBill: number; paidAmount: number; remainingBill: number; attendedCount: number } {
-  if (!std) return { totalBill: 0, paidAmount: 0, remainingBill: 0, attendedCount: 0 };
+): { totalBill: number; paidAmount: number; remainingBill: number; attendedCount: number; rate?: number } {
+  if (!std) return { totalBill: 0, paidAmount: 0, remainingBill: 0, attendedCount: 0, rate: 0 };
 
   // Hitung kehadiran bulan & tahun tersebut
   const attendedRecords = attendancesList.filter((a) => {
@@ -89,10 +89,8 @@ export function calculateStudentUnpaidBill(
       ? 60000
       : 50000;
 
-  let totalBill = attendedCount * rate;
-  if (totalBill === 0 && std.monthlyFee && std.monthlyFee > 0) {
-    totalBill = std.monthlyFee;
-  }
+  // Tagihan murni dari jumlah kehadiran riil (Status: Hadir) dikali tarif per sesi
+  const totalBill = attendedCount * rate;
 
   // Hitung yang sudah dibayar untuk periode tersebut
   const studentIncomes = incomesList.filter((inc) => {
@@ -109,7 +107,7 @@ export function calculateStudentUnpaidBill(
   const paidAmount = studentIncomes.reduce((sum, inc) => sum + (inc.amount || 0), 0);
   const remainingBill = Math.max(0, totalBill - paidAmount);
 
-  return { totalBill, paidAmount, remainingBill, attendedCount };
+  return { totalBill, paidAmount, remainingBill, attendedCount, rate };
 }
 
 export const IncomeModal: React.FC<IncomeModalProps> = ({
@@ -421,37 +419,38 @@ export const IncomeModal: React.FC<IncomeModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-hidden animate-in fade-in">
       <div
         id="income-form-modal"
-        className="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-8"
+        className="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]"
       >
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-5 flex items-center justify-between">
+        <div className="shrink-0 bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-4 sm:p-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-emerald-200">
+            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-emerald-200 shrink-0">
               <TrendingUp className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold">
+              <h3 className="text-base sm:text-lg font-bold">
                 {initialData ? 'Edit Kas Masuk / Penerimaan' : 'Input Penerimaan Kas Masuk Baru'}
               </h3>
-              <p className="text-xs text-emerald-100">
+              <p className="text-xs text-emerald-100 line-clamp-1">
                 Catat pembayaran SPP les, pendaftaran, modul, try out, dan penerimaan lainnya
               </p>
             </div>
           </div>
           <button
             onClick={() => onClose?.()}
-            className="text-white/70 hover:text-white hover:bg-white/10 p-2 rounded-xl transition cursor-pointer"
+            className="text-white/70 hover:text-white hover:bg-white/10 p-2 rounded-xl transition cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Modal Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Modal Form with Scrollable Body & Fixed Footer */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Tanggal Penerimaan */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
@@ -766,26 +765,27 @@ export const IncomeModal: React.FC<IncomeModalProps> = ({
               className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-300 rounded-xl text-slate-700 text-sm"
             />
           </div>
+        </div>
 
-          {/* Tombol Aksi */}
-          <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => onClose?.()}
-              className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition cursor-pointer"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl text-sm shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition cursor-pointer"
-            >
-              <Save className="w-4 h-4" />
-              Simpan Penerimaan Kas
-            </button>
-          </div>
-        </form>
-      </div>
+        {/* Tombol Aksi (Sticky Bottom Footer) */}
+        <div className="shrink-0 p-4 sm:px-6 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => onClose?.()}
+            className="px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold rounded-xl text-sm transition cursor-pointer"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl text-sm shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition cursor-pointer"
+          >
+            <Save className="w-4 h-4" />
+            Simpan Penerimaan Kas
+          </button>
+        </div>
+      </form>
     </div>
-  );
+  </div>
+);
 };

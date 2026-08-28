@@ -244,9 +244,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               </div>
             </div>
             <div className="text-center">
-              <p className="text-slate-500 mb-12">Penerima (Bimbel Sigma),</p>
+              <p className="text-slate-500 mb-12">Penerima (Kasir / Admin),</p>
               <div className="border-t border-slate-400 pt-1 font-bold text-slate-800">
-                {income.receivedBy || 'Budi Santoso, S.Pd.'}
+                {income.receivedBy || 'Petugas Kasir'}
               </div>
             </div>
           </div>

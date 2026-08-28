@@ -69,7 +69,7 @@ export const DashboardOwner: React.FC<DashboardOwnerProps> = ({
 
   const bimbelName = settings?.bimbelName || 'BIMBEL SIGMA';
   const tagline = settings?.tagline || 'Belajar Sampai Paham, Bukan Sekadar Hafal';
-  const ownerDisplayName = currentUser?.name || settings?.ownerName || 'Budi Santoso, S.Pd.';
+  const ownerDisplayName = currentUser?.name || settings?.ownerName || 'Pimpinan Lembaga';
 
   const ownerBadge = settings?.ownerDashboardBadge || 'Executive Dashboard (Owner Access)';
   const ownerTitle = settings?.ownerDashboardTitle || `${bimbelName} • ${ownerDisplayName}`;

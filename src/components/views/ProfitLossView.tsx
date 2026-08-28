@@ -74,9 +74,9 @@ export const ProfitLossView: React.FC<ProfitLossViewProps> = ({
 
   const bimbelName = settings?.bimbelName || 'BIMBEL SIGMA';
   const tagline = settings?.tagline || 'Belajar Sampai Paham, Bukan Sekadar Hafal';
-  const ownerName = settings?.ownerName || 'Budi Santoso, S.Pd.';
+  const ownerName = settings?.ownerName || 'Pimpinan Lembaga';
   const ownerTitle = settings?.ownerTitle || settings?.directorTitle || 'Owner & Direktur Lembaga';
-  const financeName = settings?.financeOfficerName || 'Sarah Amalia, S.Si.';
+  const financeName = settings?.financeOfficerName || 'Bendahara / Bagian Keuangan';
   const financeTitle = settings?.financeOfficerTitle || 'Bendahara / Finance & Admin';
   const opsName = settings?.operationalManagerName;
   const opsTitle = settings?.operationalManagerTitle || 'Manajer Akademik & Operasional';

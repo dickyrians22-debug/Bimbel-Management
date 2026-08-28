@@ -41,18 +41,10 @@ export const StudentModal: React.FC<StudentModalProps> = ({
       });
     }
 
-    // Default fallbacks if no tutors loaded
-    if (list.length === 0) {
-      list.push(
-        { id: 't-1', name: 'Kak Sarah Amalia, S.Si.', label: 'Kak Sarah Amalia, S.Si. (MIPA SMP/SMA)' },
-        { id: 't-2', name: 'Kak Dimas Pratama, M.Pd.', label: 'Kak Dimas Pratama, M.Pd. (SD & Calistung)' }
-      );
-    }
-
     return list;
   }, [users]);
 
-  const defaultTutorName = tutorOptions[0]?.name || 'Kak Sarah Amalia, S.Si.';
+  const defaultTutorName = tutorOptions[0]?.name || '';
 
   const [formData, setFormData] = useState({
     code: '',

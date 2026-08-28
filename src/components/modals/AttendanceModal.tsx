@@ -54,13 +54,6 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
       }
     });
 
-    if (list.length === 0) {
-      list.push(
-        { id: 't-1', name: 'Kak Sarah Amalia, S.Si.', role: 'Tutor' },
-        { id: 't-2', name: 'Kak Dimas Pratama, M.Pd.', role: 'Tutor' }
-      );
-    }
-
     return list;
   }, [users]);
 
