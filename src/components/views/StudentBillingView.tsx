@@ -12,7 +12,10 @@ import {
   Calendar,
   DollarSign,
   Printer,
+  ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Eye,
   Sparkles,
   Phone,
@@ -95,6 +98,10 @@ export const StudentBillingView: React.FC<StudentBillingViewProps> = ({
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [filterLevel, setFilterLevel] = useState<string>('All');
   const [filterClassType, setFilterClassType] = useState<string>('All');
+
+  // Pagination & Display Limit States
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   // Fast Payment Modal State
   const [paymentModalStudent, setPaymentModalStudent] = useState<StudentBillingItem | null>(null);
@@ -260,6 +267,43 @@ export const StudentBillingView: React.FC<StudentBillingViewProps> = ({
       totalActiveStudents: relevantBillingItems.length,
     };
   }, [relevantBillingItems]);
+
+  // Reset page when filter, month/year, or page size changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus, filterLevel, filterClassType, selectedMonth, selectedYear, pageSize]);
+
+  const totalItems = filteredBillingItems.length;
+  const isShowAll = pageSize >= 999999;
+  const totalPages = isShowAll ? 1 : Math.max(1, Math.ceil(totalItems / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const startIndex = isShowAll ? 0 : (safeCurrentPage - 1) * pageSize;
+  const endIndex = isShowAll ? totalItems : Math.min(startIndex + pageSize, totalItems);
+  const currentBillingRecords = filteredBillingItems.slice(startIndex, endIndex);
+
+  // Expand / Collapse Handlers
+  const handleShowMore = () => {
+    if (pageSize < 25) {
+      setPageSize(25);
+    } else if (pageSize < 50) {
+      setPageSize(50);
+    } else if (pageSize < 100) {
+      setPageSize(100);
+    } else {
+      setPageSize(999999);
+    }
+  };
+
+  const handleShowLess = () => {
+    if (pageSize > 50) {
+      setPageSize(50);
+    } else if (pageSize > 25) {
+      setPageSize(25);
+    } else {
+      setPageSize(10);
+    }
+  };
 
   // Handle WhatsApp Message Sending
   const handleSendWhatsApp = (item: StudentBillingItem) => {
@@ -699,6 +743,35 @@ export const StudentBillingView: React.FC<StudentBillingViewProps> = ({
 
       {/* Main Billing Table */}
       <div id="printable-billing-table" className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        {/* Table Top Bar */}
+        <div className="p-4 bg-slate-50/70 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-700">
+              Total {totalItems} Data Tagihan Siswa
+            </span>
+            {totalItems > 0 && (
+              <span className="text-[11px] font-semibold text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded-md">
+                Menampilkan {startIndex + 1} - {endIndex}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+            <span>Baris per halaman:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value={10}>10 data</option>
+              <option value={25}>25 data</option>
+              <option value={50}>50 data</option>
+              <option value={100}>100 data</option>
+              <option value={999999}>Tampilkan Semua</option>
+            </select>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -715,7 +788,7 @@ export const StudentBillingView: React.FC<StudentBillingViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
-              {filteredBillingItems.length === 0 ? (
+              {totalItems === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
@@ -725,7 +798,7 @@ export const StudentBillingView: React.FC<StudentBillingViewProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredBillingItems.map((item, index) => {
+                currentBillingRecords.map((item, index) => {
                   return (
                     <tr
                       key={item.id}
@@ -733,7 +806,7 @@ export const StudentBillingView: React.FC<StudentBillingViewProps> = ({
                     >
                       {/* 1. No */}
                       <td className="py-3.5 px-4 text-center text-slate-400 font-mono text-[11px]">
-                        {index + 1}
+                        {startIndex + index + 1}
                       </td>
 
                       {/* 2. Nama Siswa & Kelas */}
@@ -884,6 +957,89 @@ export const StudentBillingView: React.FC<StudentBillingViewProps> = ({
             </tbody>
           </table>
         </div>
+
+        {/* Bottom Pagination & Show More/Less Controls */}
+        {totalItems > 0 && (
+          <div className="p-4 bg-slate-50/90 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+            {/* Quick Action: Tampilkan Lebih Banyak / Lebih Sedikit */}
+            <div className="flex items-center gap-2">
+              {totalItems > 10 && (
+                <>
+                  {!isShowAll && endIndex < totalItems && (
+                    <button
+                      onClick={handleShowMore}
+                      className="px-3 py-1.5 bg-white border border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 text-slate-700 hover:text-indigo-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5 text-indigo-600" />
+                      Tampilkan Lebih Banyak ({pageSize === 10 ? '25' : pageSize === 25 ? '50' : 'Semua'})
+                    </button>
+                  )}
+
+                  {pageSize > 10 && (
+                    <button
+                      onClick={handleShowLess}
+                      className="px-3 py-1.5 bg-white border border-slate-300 hover:border-amber-400 hover:bg-amber-50 text-slate-700 hover:text-amber-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                    >
+                      <ChevronUp className="w-3.5 h-3.5 text-amber-600" />
+                      Tampilkan Lebih Sedikit (Kembali ke {pageSize > 25 ? '25' : '10'})
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Pagination Controls */}
+            {!isShowAll && totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={safeCurrentPage === 1}
+                  className="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Sebelumnya
+                </button>
+
+                {/* Page Number Indicators */}
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((p) => {
+                      return p === 1 || p === totalPages || Math.abs(p - safeCurrentPage) <= 1;
+                    })
+                    .map((p, idx, arr) => {
+                      const prevPage = arr[idx - 1];
+                      const isGap = prevPage && p - prevPage > 1;
+
+                      return (
+                        <React.Fragment key={p}>
+                          {isGap && <span className="px-1 text-slate-400 text-xs font-bold">...</span>}
+                          <button
+                            onClick={() => setCurrentPage(p)}
+                            className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+                              safeCurrentPage === p
+                                ? 'bg-indigo-600 text-white shadow-xs'
+                                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={safeCurrentPage === totalPages}
+                  className="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
+                >
+                  Selanjutnya
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* MODAL 1: FORM PEMBAYARAN TAGIHAN CEPAT (FAST PAYMENT MODAL) */}
