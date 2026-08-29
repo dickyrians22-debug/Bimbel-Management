@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   CalendarCheck2,
   PlusCircle,
@@ -14,6 +14,11 @@ import {
   User,
   Sparkles,
   FileSpreadsheet,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  ChevronsUpDown,
 } from 'lucide-react';
 import { AttendanceRecord, Student, UserRole, AttendanceStatus, UserAccount } from '../../types';
 import { formatDateIndo, getTodayDateString, resolveTutorName } from '../../utils/storage';
@@ -47,34 +52,54 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [filterClassType, setFilterClassType] = useState<string>('All');
 
+  // Pagination & Display Limit States
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
   const canEdit = userRole === 'owner' || userRole === 'tutor';
 
   // Filtered records sorted by date descending then time descending
-  const filteredAttendance = attendance
-    .filter((a) => {
-      const student = students.find((s) => s.id === a.studentId);
-      const studentName = student?.name || a.studentName || '';
-      const studentCode = student?.code || a.studentCode || '';
-      const classType = student?.classType || a.classType || '';
-      const tutorDisplay = resolveTutorName(a.tutorName, users);
+  const filteredAttendance = useMemo(() => {
+    return attendance
+      .filter((a) => {
+        const student = students.find((s) => s.id === a.studentId);
+        const studentName = student?.name || a.studentName || '';
+        const studentCode = student?.code || a.studentCode || '';
+        const classType = student?.classType || a.classType || '';
+        const tutorDisplay = resolveTutorName(a.tutorName, users);
 
-      const term = (searchTerm || '').toLowerCase();
-      const matchSearch =
-        !term ||
-        studentName.toLowerCase().includes(term) ||
-        studentCode.toLowerCase().includes(term) ||
-        (a.topic || '').toLowerCase().includes(term) ||
-        tutorDisplay.toLowerCase().includes(term) ||
-        (a.tutorName || '').toLowerCase().includes(term);
+        const term = (searchTerm || '').toLowerCase();
+        const matchSearch =
+          !term ||
+          studentName.toLowerCase().includes(term) ||
+          studentCode.toLowerCase().includes(term) ||
+          (a.topic || '').toLowerCase().includes(term) ||
+          tutorDisplay.toLowerCase().includes(term) ||
+          (a.tutorName || '').toLowerCase().includes(term);
 
-      const matchDate = !filterDate || a.date === filterDate;
-      const matchStudent = filterStudentId === 'All' || a.studentId === filterStudentId;
-      const matchStatus = filterStatus === 'All' || a.status === filterStatus;
-      const matchClass = filterClassType === 'All' || classType === filterClassType;
+        const matchDate = !filterDate || a.date === filterDate;
+        const matchStudent = filterStudentId === 'All' || a.studentId === filterStudentId;
+        const matchStatus = filterStatus === 'All' || a.status === filterStatus;
+        const matchClass = filterClassType === 'All' || classType === filterClassType;
 
-      return matchSearch && matchDate && matchStudent && matchStatus && matchClass;
-    })
-    .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.time || '').localeCompare(a.time || ''));
+        return matchSearch && matchDate && matchStudent && matchStatus && matchClass;
+      })
+      .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.time || '').localeCompare(a.time || ''));
+  }, [attendance, students, users, searchTerm, filterDate, filterStudentId, filterStatus, filterClassType]);
+
+  // Reset current page to 1 when any filter or page size changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterDate, filterStudentId, filterStatus, filterClassType, pageSize]);
+
+  const totalItems = filteredAttendance.length;
+  const isShowAll = pageSize >= 999999;
+  const totalPages = isShowAll ? 1 : Math.max(1, Math.ceil(totalItems / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const startIndex = isShowAll ? 0 : (safeCurrentPage - 1) * pageSize;
+  const endIndex = isShowAll ? totalItems : Math.min(startIndex + pageSize, totalItems);
+  const currentRecords = filteredAttendance.slice(startIndex, endIndex);
 
   const todayCount = attendance.filter((a) => a.date === today && a.status === 'Hadir').length;
 
@@ -92,6 +117,29 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
     const formattedData = formatAttendanceForExcel(enrichedAttendance);
     const fileName = filterDate ? `Rekap_Presensi_Bimbel_Sigma_${filterDate}` : 'Rekap_Presensi_Bimbel_Sigma_Lengkap';
     exportToExcel(formattedData, fileName, 'Presensi');
+  };
+
+  // Expand / Collapse Handlers
+  const handleShowMore = () => {
+    if (pageSize < 25) {
+      setPageSize(25);
+    } else if (pageSize < 50) {
+      setPageSize(50);
+    } else if (pageSize < 100) {
+      setPageSize(100);
+    } else {
+      setPageSize(999999); // Show all
+    }
+  };
+
+  const handleShowLess = () => {
+    if (pageSize > 50) {
+      setPageSize(50);
+    } else if (pageSize > 25) {
+      setPageSize(25);
+    } else {
+      setPageSize(10);
+    }
   };
 
   return (
@@ -229,20 +277,47 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
         </div>
       </div>
 
-      {/* Attendance Table */}
+      {/* Attendance Table Card */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-4 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-600">
-            Ditemukan {filteredAttendance.length} Catatan Presensi
-          </span>
-          {filterDate && (
-            <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-              Filter Tanggal: {formatDateIndo(filterDate)}
+        {/* Table Top Bar */}
+        <div className="p-4 bg-slate-50/70 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-700">
+              Total {totalItems} Catatan Presensi
             </span>
-          )}
+            {totalItems > 0 && (
+              <span className="text-[11px] font-semibold text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded-md">
+                Menampilkan {startIndex + 1} - {endIndex}
+              </span>
+            )}
+          </div>
+
+          {/* Quick Page Size Selector & Date Filter Badge */}
+          <div className="flex items-center gap-3">
+            {filterDate && (
+              <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                Filter: {formatDateIndo(filterDate)}
+              </span>
+            )}
+
+            <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+              <span>Baris per halaman:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                className="bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value={10}>10 data</option>
+                <option value={25}>25 data</option>
+                <option value={50}>50 data</option>
+                <option value={100}>100 data</option>
+                <option value={999999}>Tampilkan Semua</option>
+              </select>
+            </div>
+          </div>
         </div>
 
-        {filteredAttendance.length === 0 ? (
+        {totalItems === 0 ? (
           <div className="text-center py-16 px-4">
             <CalendarCheck2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <p className="text-base font-bold text-slate-700">Tidak ada data presensi yang sesuai</p>
@@ -264,7 +339,7 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredAttendance.map((rec) => {
+                {currentRecords.map((rec) => {
                   const student = students.find((s) => s.id === rec.studentId);
                   const displayStudentName = student?.name || rec.studentName;
                   const displayStudentCode = student?.code || rec.studentCode;
@@ -305,64 +380,64 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
                         </span>
                       </td>
 
-                    {/* Status */}
-                    <td className="py-3 px-4">
-                      <span
-                        className={`px-2.5 py-1 text-xs font-bold rounded-lg ${
-                          rec.status === 'Hadir'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : rec.status === 'Izin'
-                            ? 'bg-amber-100 text-amber-800'
-                            : rec.status === 'Sakit'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-rose-100 text-rose-800'
-                        }`}
-                      >
-                        {rec.status}
-                      </span>
-                    </td>
-
-                    {/* Topik / Materi */}
-                    <td className="py-3 px-4">
-                      <div className="font-medium text-slate-900 max-w-xs">{rec.topic}</div>
-                    </td>
-
-                    {/* Catatan Tutor */}
-                    <td className="py-3 px-4 text-xs text-slate-500 italic max-w-xs truncate">
-                      {rec.tutorNotes || '-'}
-                    </td>
-
-                    {/* Tutor */}
-                    <td className="py-3 px-4 text-xs font-medium text-slate-700">
-                      {resolveTutorName(rec.tutorName, users)}
-                    </td>
-
-                    {/* Aksi (Edit & Hapus) */}
-                    {canEdit && (
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => onOpenAttendanceModal(rec)}
-                            title="Edit Data Presensi"
-                            className="p-1.5 bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 rounded-lg transition cursor-pointer"
-                          >
-                            <FileEdit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() =>
-                              onDeleteAttendance(
-                                rec.id,
-                                `${rec.studentName} - ${formatDateIndo(rec.date)} (${rec.time})`
-                              )
-                            }
-                            title="Hapus Presensi"
-                            className="p-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 rounded-lg transition cursor-pointer"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                      {/* Status */}
+                      <td className="py-3 px-4">
+                        <span
+                          className={`px-2.5 py-1 text-xs font-bold rounded-lg ${
+                            rec.status === 'Hadir'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : rec.status === 'Izin'
+                              ? 'bg-amber-100 text-amber-800'
+                              : rec.status === 'Sakit'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}
+                        >
+                          {rec.status}
+                        </span>
                       </td>
-                    )}
+
+                      {/* Topik / Materi */}
+                      <td className="py-3 px-4">
+                        <div className="font-medium text-slate-900 max-w-xs">{rec.topic}</div>
+                      </td>
+
+                      {/* Catatan Tutor */}
+                      <td className="py-3 px-4 text-xs text-slate-500 italic max-w-xs truncate">
+                        {rec.tutorNotes || '-'}
+                      </td>
+
+                      {/* Tutor */}
+                      <td className="py-3 px-4 text-xs font-medium text-slate-700">
+                        {resolveTutorName(rec.tutorName, users)}
+                      </td>
+
+                      {/* Aksi (Edit & Hapus) */}
+                      {canEdit && (
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => onOpenAttendanceModal(rec)}
+                              title="Edit Data Presensi"
+                              className="p-1.5 bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 rounded-lg transition cursor-pointer"
+                            >
+                              <FileEdit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() =>
+                                onDeleteAttendance(
+                                  rec.id,
+                                  `${rec.studentName} - ${formatDateIndo(rec.date)} (${rec.time})`
+                                )
+                              }
+                              title="Hapus Presensi"
+                              className="p-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 rounded-lg transition cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -370,7 +445,92 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
             </table>
           </div>
         )}
+
+        {/* Bottom Pagination & Show More/Less Controls */}
+        {totalItems > 0 && (
+          <div className="p-4 bg-slate-50/90 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+            {/* Quick Action: Tampilkan Lebih Banyak / Lebih Sedikit */}
+            <div className="flex items-center gap-2">
+              {totalItems > 10 && (
+                <>
+                  {!isShowAll && endIndex < totalItems && (
+                    <button
+                      onClick={handleShowMore}
+                      className="px-3 py-1.5 bg-white border border-slate-300 hover:border-emerald-400 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5 text-emerald-600" />
+                      Tampilkan Lebih Banyak ({pageSize === 10 ? '25' : pageSize === 25 ? '50' : 'Semua'})
+                    </button>
+                  )}
+
+                  {pageSize > 10 && (
+                    <button
+                      onClick={handleShowLess}
+                      className="px-3 py-1.5 bg-white border border-slate-300 hover:border-amber-400 hover:bg-amber-50 text-slate-700 hover:text-amber-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                    >
+                      <ChevronUp className="w-3.5 h-3.5 text-amber-600" />
+                      Tampilkan Lebih Sedikit (Kembali ke {pageSize > 25 ? '25' : '10'})
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Pagination Controls */}
+            {!isShowAll && totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={safeCurrentPage === 1}
+                  className="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Sebelumnya
+                </button>
+
+                {/* Page Number Indicators */}
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((p) => {
+                      // Always show first, last, and pages near current page
+                      return p === 1 || p === totalPages || Math.abs(p - safeCurrentPage) <= 1;
+                    })
+                    .map((p, idx, arr) => {
+                      const prevPage = arr[idx - 1];
+                      const isGap = prevPage && p - prevPage > 1;
+
+                      return (
+                        <React.Fragment key={p}>
+                          {isGap && <span className="px-1 text-slate-400 text-xs font-bold">...</span>}
+                          <button
+                            onClick={() => setCurrentPage(p)}
+                            className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+                              safeCurrentPage === p
+                                ? 'bg-emerald-600 text-white shadow-xs'
+                                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={safeCurrentPage === totalPages}
+                  className="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
+                >
+                  Selanjutnya
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
