@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Users,
   UserPlus,
@@ -48,6 +48,17 @@ export const StudentDatabaseView: React.FC<StudentDatabaseViewProps> = ({
   const [filterType, setFilterType] = useState<string>('All');
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [selectedStudentDetail, setSelectedStudentDetail] = useState<Student | null>(null);
+
+  // Close detail modal on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedStudentDetail) {
+        setSelectedStudentDetail(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedStudentDetail]);
 
   // Pagination & Display Limit States
   const [pageSize, setPageSize] = useState<number>(10);
@@ -499,8 +510,14 @@ export const StudentDatabaseView: React.FC<StudentDatabaseViewProps> = ({
 
       {/* Detail Modal Popup */}
       {selectedStudentDetail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in cursor-pointer"
+          onClick={() => setSelectedStudentDetail(null)}
+        >
+          <div 
+            className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="bg-gradient-to-r from-indigo-900 to-slate-900 text-white p-5 flex items-center justify-between">
               <div>
                 <span className="text-[10px] uppercase font-bold text-indigo-300">

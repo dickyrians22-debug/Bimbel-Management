@@ -177,8 +177,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     ...settings,
     logoSymbol: settings.logoSymbol || 'Σ',
     appVersionBadge: settings.appVersionBadge || 'v2.6 PRO',
-    sidebarFooterTitle: settings.sidebarFooterTitle || settings.bimbelName || 'BIMBEL SIGMA',
-    sidebarFooterTagline: settings.sidebarFooterTagline || (settings.tagline ? `“${settings.tagline}”` : '“Belajar Sampai Paham”'),
+    sidebarFooterTitle: settings.sidebarFooterTitle || 'BIMBEL SIGMA',
+    sidebarFooterTagline: settings.sidebarFooterTagline || '“Belajar Sampai Paham”',
     sidebarFooterNote: settings.sidebarFooterNote || 'Data tersimpan aman di LocalStorage browser',
     accentColor: settings.accentColor || 'indigo',
     ownerDashboardBadge: settings.ownerDashboardBadge || 'Executive Dashboard (Owner Access)',
@@ -229,6 +229,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     type?: 'warning' | 'info' | 'error';
   } | null>(null);
 
+  // Close noticeModal on Escape key
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && noticeModal?.isOpen) {
+        setNoticeModal(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [noticeModal]);
+
   React.useEffect(() => {
     setProfileForm({ ...settings });
     setSalaryForm({
@@ -248,8 +259,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       ...settings,
       logoSymbol: settings.logoSymbol || 'Σ',
       appVersionBadge: settings.appVersionBadge || 'v2.6 PRO',
-      sidebarFooterTitle: settings.sidebarFooterTitle || settings.bimbelName || 'BIMBEL SIGMA',
-      sidebarFooterTagline: settings.sidebarFooterTagline || (settings.tagline ? `“${settings.tagline}”` : '“Belajar Sampai Paham”'),
+      sidebarFooterTitle: settings.sidebarFooterTitle || 'BIMBEL SIGMA',
+      sidebarFooterTagline: settings.sidebarFooterTagline || '“Belajar Sampai Paham”',
       sidebarFooterNote: settings.sidebarFooterNote || 'Data tersimpan aman di LocalStorage browser',
       accentColor: settings.accentColor || 'indigo',
       ownerDashboardBadge: settings.ownerDashboardBadge || 'Executive Dashboard (Owner Access)',
@@ -587,7 +598,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   // Profile Form Save
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    onSaveSettings(profileForm);
+    const updatedSettings: BimbelSettings = {
+      ...settings,
+      ...profileForm,
+    };
+    onSaveSettings(updatedSettings);
     setProfileSavedToast(true);
     setTimeout(() => setProfileSavedToast(false), 3000);
   };
@@ -677,7 +692,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   // Appearance Submit Handlers
   const handleSubmitAppearance = (e: React.FormEvent) => {
     e.preventDefault();
-    onSaveSettings(appearanceForm);
+    const updatedSettings: BimbelSettings = {
+      ...settings,
+      logoSymbol: appearanceForm.logoSymbol,
+      appVersionBadge: appearanceForm.appVersionBadge,
+      sidebarFooterTitle: appearanceForm.sidebarFooterTitle,
+      sidebarFooterTagline: appearanceForm.sidebarFooterTagline,
+      sidebarFooterNote: appearanceForm.sidebarFooterNote,
+      accentColor: appearanceForm.accentColor,
+      ownerDashboardBadge: appearanceForm.ownerDashboardBadge,
+      ownerDashboardTitle: appearanceForm.ownerDashboardTitle,
+      ownerDashboardMessage: appearanceForm.ownerDashboardMessage,
+      tutorDashboardBadge: appearanceForm.tutorDashboardBadge,
+      tutorDashboardTitle: appearanceForm.tutorDashboardTitle,
+      tutorDashboardMessage: appearanceForm.tutorDashboardMessage,
+      studentDashboardBadge: appearanceForm.studentDashboardBadge,
+      studentDashboardTitle: appearanceForm.studentDashboardTitle,
+      studentDashboardMessage: appearanceForm.studentDashboardMessage,
+      loginWelcomeMessage: appearanceForm.loginWelcomeMessage,
+    };
+    onSaveSettings(updatedSettings);
     setAppearanceSavedToast(true);
     setTimeout(() => setAppearanceSavedToast(false), 3000);
   };
@@ -2941,7 +2975,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
                 <div className="p-3.5 bg-white rounded-xl text-center shadow-md border border-slate-200">
                   <p className="text-[12px] font-extrabold text-indigo-950 font-heading">
-                    {appearanceForm.sidebarFooterTitle || appearanceForm.bimbelName || 'BIMBEL SIGMA'}
+                    {appearanceForm.sidebarFooterTitle || 'BIMBEL SIGMA'}
                   </p>
                   <p className="text-[11px] text-amber-700 font-semibold italic mt-0.5">
                     {appearanceForm.sidebarFooterTagline || '“Belajar Sampai Paham”'}
@@ -2968,7 +3002,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-black text-white">
-                          {appearanceForm.bimbelName || 'BIMBEL SIGMA'}
+                          {appearanceForm.sidebarFooterTitle || 'BIMBEL SIGMA'}
                         </span>
                         {appearanceForm.appVersionBadge && (
                           <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">
@@ -2977,7 +3011,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         )}
                       </div>
                       <p className="text-[10px] text-amber-300/90 font-medium">
-                        “{appearanceForm.tagline || 'Belajar Sampai Paham, Bukan Sekadar Hafal'}”
+                        {appearanceForm.sidebarFooterTagline || '“Belajar Sampai Paham”'}
                       </p>
                     </div>
                   </div>
@@ -2994,10 +3028,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       {appearanceForm.ownerDashboardBadge || 'Executive Dashboard (Owner Access)'}
                     </div>
                     <h5 className="text-sm font-black text-white font-heading">
-                      {appearanceForm.ownerDashboardTitle || `${appearanceForm.bimbelName || 'BIMBEL SIGMA'} • Budi Santoso, S.Pd.`}
+                      {appearanceForm.ownerDashboardTitle || `${appearanceForm.sidebarFooterTitle || 'BIMBEL SIGMA'} • Budi Santoso, S.Pd.`}
                     </h5>
                     <p className="text-xs text-indigo-200 font-medium leading-relaxed">
-                      {appearanceForm.ownerDashboardMessage || 'Pantau metrik finansial, absensi digital real-time, dan pembukuan tahunan dalam satu pintu.'}
+                      {appearanceForm.ownerDashboardMessage || `“${(appearanceForm.sidebarFooterTagline || '“Belajar Sampai Paham”').replace(/[“”"]/g, '')}”. Selamat datang, Budi Santoso, S.Pd.! Pantau metrik finansial, absensi digital real-time, dan pembukuan tahunan dalam satu pintu.`}
                     </p>
                   </div>
                 )}
@@ -3037,7 +3071,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           {/* Form Settings */}
           <form onSubmit={handleSubmitAppearance} className="space-y-6">
-            {/* CARD 1: PENGATURAN TEKS SIDEBAR POJOK KIRI BAWAH (Permintaan Khusus) */}
+            {/* CARD 1: PENGATURAN BRAND & SLOGAN TAMPILAN APLIKASI */}
             <div className="bg-white p-6 sm:p-7 rounded-3xl border border-amber-200 shadow-xs space-y-5 bg-gradient-to-br from-amber-50/40 via-white to-white">
               <div className="flex items-center gap-3 pb-3 border-b border-amber-200/60">
                 <div className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-700 flex items-center justify-center font-bold">
@@ -3045,11 +3079,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-slate-900 font-heading flex items-center gap-2">
-                    <span>1. Teks Menu Sidebar Bawah Kiri</span>
-                    <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-extrabold">Pojok Kiri Bawah</span>
+                    <span>1. Brand &amp; Slogan Tampilan Aplikasi (Sidebar &amp; Navbar)</span>
+                    <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-extrabold">Tampilan UI Utama</span>
                   </h4>
                   <p className="text-xs text-slate-500">
-                    Pengaturan tulisan pada kotak info di paling bawah menu samping (Sidebar).
+                    Mengatur teks nama brand &amp; slogan yang tampil pada Menu Samping (Sidebar), Header Navbar atas, dan sambutan Dashboard.
                   </p>
                 </div>
               </div>
@@ -3057,7 +3091,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Judul Brand Sidebar Bawah *
+                    Nama Brand Aplikasi di Tampilan UI *
                   </label>
                   <input
                     type="text"
@@ -3067,13 +3101,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-amber-500"
                   />
                   <p className="text-[11px] text-slate-400 mt-1">
-                    Default awal: <span className="font-semibold text-slate-600">BIMBEL SIGMA</span>
+                    Default: <span className="font-semibold text-slate-600">BIMBEL SIGMA</span>
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Tagline / Slogan di Bawah Kiri *
+                    Slogan / Tagline Tampilan UI *
                   </label>
                   <input
                     type="text"
@@ -3083,13 +3117,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-amber-500"
                   />
                   <p className="text-[11px] text-slate-400 mt-1">
-                    Default awal: <span className="font-semibold text-slate-600">“Belajar Sampai Paham”</span>
+                    Default: <span className="font-semibold text-slate-600">“Belajar Sampai Paham”</span>
                   </p>
                 </div>
 
                 <div className="md:col-span-2">
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Catatan Kaki Bawah Kiri (Keterangan Tambahan)
+                    Catatan Kaki Menu Sidebar Bawah Kiri
                   </label>
                   <input
                     type="text"
@@ -3102,7 +3136,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
 
-            {/* CARD 2: HEADER & NAVBAR ATAS */}
+            {/* CARD 2: SIMBOL LOGO & BADGE VERSI */}
             <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-xs space-y-5">
               <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
                 <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
@@ -3110,15 +3144,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-slate-900 font-heading">
-                    2. Logo & Teks Header Navbar Atas
+                    2. Logo Simbol &amp; Badge Versi Navbar
                   </h4>
                   <p className="text-xs text-slate-500">
-                    Pengaturan identitas visual pada navigasi bar atas aplikasi.
+                    Pengaturan ikon dan label versi pada bilah navigasi atas.
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                     Simbol Logo / Inisial (1-4 Karakter)
@@ -3143,32 +3177,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     onChange={(e) => setAppearanceForm({ ...appearanceForm, appVersionBadge: e.target.value })}
                     placeholder="Contoh: v2.6 PRO"
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Nama Lembaga di Navbar (Sinkron dengan Profil)
-                  </label>
-                  <input
-                    type="text"
-                    value={appearanceForm.bimbelName || ''}
-                    onChange={(e) => setAppearanceForm({ ...appearanceForm, bimbelName: e.target.value })}
-                    placeholder="Contoh: BIMBEL SIGMA"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div className="sm:col-span-2 md:col-span-4">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Slogan Utama Lembaga di Navbar
-                  </label>
-                  <input
-                    type="text"
-                    value={appearanceForm.tagline || ''}
-                    onChange={(e) => setAppearanceForm({ ...appearanceForm, tagline: e.target.value })}
-                    placeholder="Contoh: Belajar Sampai Paham, Bukan Sekadar Hafal"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
               </div>
@@ -3550,8 +3558,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       {/* In-App Notice / Warning Modal */}
       {noticeModal && noticeModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200 cursor-pointer"
+          onClick={() => setNoticeModal(null)}
+        >
+          <div 
+            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200 cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-start gap-4">
               <div
                 className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${

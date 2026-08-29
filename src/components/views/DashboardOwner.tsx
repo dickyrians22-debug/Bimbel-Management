@@ -67,13 +67,13 @@ export const DashboardOwner: React.FC<DashboardOwnerProps> = ({
   const currentYear = new Date().getFullYear();
   const currentMonthPrefix = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
 
-  const bimbelName = settings?.bimbelName || 'BIMBEL SIGMA';
-  const tagline = settings?.tagline || 'Belajar Sampai Paham, Bukan Sekadar Hafal';
+  const brandTitle = settings?.sidebarFooterTitle || 'BIMBEL SIGMA';
+  const brandTagline = (settings?.sidebarFooterTagline || '“Belajar Sampai Paham”').replace(/[“”"]/g, '');
   const ownerDisplayName = currentUser?.name || settings?.ownerName || 'Pimpinan Lembaga';
 
   const ownerBadge = settings?.ownerDashboardBadge || 'Executive Dashboard (Owner Access)';
-  const ownerTitle = settings?.ownerDashboardTitle || `${bimbelName} • ${ownerDisplayName}`;
-  const ownerMessage = settings?.ownerDashboardMessage || `“${tagline}”. Selamat datang, ${ownerDisplayName}! Pantau metrik finansial, absensi digital real-time, dan pembukuan tahunan dalam satu pintu.`;
+  const ownerTitle = settings?.ownerDashboardTitle || `${brandTitle} • ${ownerDisplayName}`;
+  const ownerMessage = settings?.ownerDashboardMessage || `“${brandTagline}”. Selamat datang, ${ownerDisplayName}! Pantau metrik finansial, absensi digital real-time, dan pembukuan tahunan dalam satu pintu.`;
 
   // KPI Calculations
   const activeStudents = students.filter((s) => s.status === 'Aktif');

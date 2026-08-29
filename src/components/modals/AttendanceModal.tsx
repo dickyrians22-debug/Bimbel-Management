@@ -188,6 +188,18 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
     });
   }, [students, studentSearchTerm, selectedLevelFilter, selectedTypeFilter]);
 
+  // Close modal on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSelectStudent = (student: Student) => {
@@ -229,10 +241,14 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in cursor-pointer"
+      onClick={() => onClose?.()}
+    >
       <div
         id="attendance-form-modal"
-        className="w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-6"
+        className="w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-6 cursor-default"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-600 via-teal-700 to-emerald-800 text-white p-5 flex items-center justify-between">

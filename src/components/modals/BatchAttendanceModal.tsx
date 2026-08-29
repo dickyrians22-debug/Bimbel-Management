@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { X, CheckSquare, Calendar, Clock, BookOpen, UserCheck, Layers, Save, Search, GraduationCap } from 'lucide-react';
 import { Student, AttendanceRecord, AttendanceStatus, UserAccount, StudentLevel, ClassType } from '../../types';
 import { getTodayDateString, getCurrentTimeString, formatRupiah } from '../../utils/storage';
@@ -60,6 +60,18 @@ export const BatchAttendanceModal: React.FC<BatchAttendanceModalProps> = ({
       return initial;
     }
   );
+
+  // Close modal on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -143,10 +155,14 @@ export const BatchAttendanceModal: React.FC<BatchAttendanceModalProps> = ({
   const totalIncluded = filteredStudents.filter((s) => studentStatuses[s.id]?.included).length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in cursor-pointer"
+      onClick={() => onClose?.()}
+    >
       <div
         id="batch-attendance-modal"
-        className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-6"
+        className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-6 cursor-default"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="bg-gradient-to-r from-teal-700 to-indigo-800 text-white p-5 flex items-center justify-between">

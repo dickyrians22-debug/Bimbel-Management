@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Printer, CheckCircle, GraduationCap, Download, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { IncomeRecord, Student, BimbelSettings } from '../../types';
 import { formatRupiah, getMonthNameIndo, formatDateIndo } from '../../utils/storage';
@@ -21,6 +21,18 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 }) => {
   const [isExportingImage, setIsExportingImage] = useState(false);
   const receiptCardRef = useRef<HTMLDivElement>(null);
+
+  // Close modal on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -46,10 +58,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in cursor-pointer"
+      onClick={() => onClose?.()}
+    >
       <div
         id="receipt-modal-container"
-        className="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-8"
+        className="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-8 cursor-default"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Topbar (Hidden when printing) */}
         <div className="no-print bg-slate-900 text-white p-4 flex flex-wrap items-center justify-between gap-3">

@@ -107,6 +107,18 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
     }
   }, [initialData, isOpen, currentUserName, existingExpenses]);
 
+  // Close modal on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   // Tutor selection helper
@@ -176,10 +188,14 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-hidden animate-in fade-in">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-hidden animate-in fade-in cursor-pointer"
+      onClick={() => onClose?.()}
+    >
       <div
         id="expense-form-modal"
-        className="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]"
+        className="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] cursor-default"
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="shrink-0 bg-gradient-to-r from-rose-600 to-amber-700 text-white p-4 sm:p-5 flex items-center justify-between">
           <div className="flex items-center gap-3">

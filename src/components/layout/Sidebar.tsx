@@ -42,8 +42,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const role = currentUser.role;
 
-  const footerTitle = settings?.sidebarFooterTitle || settings?.bimbelName || 'BIMBEL SIGMA';
-  const footerTagline = settings?.sidebarFooterTagline || (settings?.tagline ? `“${settings.tagline}”` : '“Belajar Sampai Paham”');
+  const footerTitle = settings?.sidebarFooterTitle || 'BIMBEL SIGMA';
+  const footerTagline = settings?.sidebarFooterTagline || '“Belajar Sampai Paham”';
   const footerNote = settings?.sidebarFooterNote || 'Data tersimpan aman di LocalStorage browser';
 
   interface NavItem {

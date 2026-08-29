@@ -39,8 +39,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [timeStr, setTimeStr] = React.useState('');
 
-  const bimbelName = settings?.bimbelName || 'BIMBEL SIGMA';
-  const tagline = settings?.tagline || 'Belajar Sampai Paham, Bukan Sekadar Hafal';
+  const bimbelName = settings?.sidebarFooterTitle || 'BIMBEL SIGMA';
+  const tagline = (settings?.sidebarFooterTagline || '“Belajar Sampai Paham”').replace(/[“”"]/g, '');
   const logoSymbol = settings?.logoSymbol || 'Σ';
   const appVersionBadge = settings?.appVersionBadge || 'v2.6 PRO';
 

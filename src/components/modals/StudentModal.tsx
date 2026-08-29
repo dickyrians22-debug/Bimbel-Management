@@ -103,6 +103,18 @@ export const StudentModal: React.FC<StudentModalProps> = ({
     }
   }, [initialData, isOpen, existingStudentsCount, defaultTutorName, tutorOptions]);
 
+  // Close modal on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -138,10 +150,14 @@ export const StudentModal: React.FC<StudentModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in cursor-pointer"
+      onClick={() => onClose?.()}
+    >
       <div
         id="student-form-modal"
-        className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-8"
+        className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-8 cursor-default"
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-white border-b border-slate-200 text-slate-900 p-5 flex items-center justify-between">
           <div className="flex items-center gap-3">

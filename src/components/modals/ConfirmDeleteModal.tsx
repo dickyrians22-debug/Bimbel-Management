@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 
 interface ConfirmDeleteModalProps {
@@ -22,8 +22,6 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
   itemIdentifier,
   itemName,
 }) => {
-  if (!isOpen) return null;
-
   const handleClose = () => {
     if (typeof onClose === 'function') {
       onClose();
@@ -32,13 +30,31 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
     }
   };
 
+  // Close modal on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose, onCancel]);
+
+  if (!isOpen) return null;
+
   const displayIdentifier = itemName || itemIdentifier;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200 cursor-pointer"
+      onClick={handleClose}
+    >
       <div
         id="confirm-delete-modal-card"
-        className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all"
+        className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all cursor-default"
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6">
           <div className="flex items-center justify-between pb-4 border-b border-slate-100">

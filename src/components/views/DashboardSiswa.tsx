@@ -61,12 +61,12 @@ export const DashboardSiswa: React.FC<DashboardSiswaProps> = ({
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
 
-  const bimbelName = settings?.bimbelName || 'Bimbel Sigma';
-  const tagline = settings?.tagline || 'Belajar Sampai Paham, Bukan Sekadar Hafal';
+  const brandTitle = settings?.sidebarFooterTitle || 'Bimbel Sigma';
+  const brandTagline = (settings?.sidebarFooterTagline || '“Belajar Sampai Paham”').replace(/[“”"]/g, '');
 
-  const studentBadge = settings?.studentDashboardBadge || `Portal Siswa & Orang Tua ${bimbelName}`;
+  const studentBadge = settings?.studentDashboardBadge || `Portal Siswa & Orang Tua ${brandTitle}`;
   const studentTitle = settings?.studentDashboardTitle || `Selamat Belajar, ${safeStudent.name}!`;
-  const studentMessage = settings?.studentDashboardMessage || `“${tagline}”. Catat kehadiran mandiri, pantau materi tiap sesi pembelajaran, dan evaluasi hasil belajar.`;
+  const studentMessage = settings?.studentDashboardMessage || `“${brandTagline}”. Catat kehadiran mandiri, pantau materi tiap sesi pembelajaran, dan evaluasi hasil belajar.`;
 
   // Check if this student has already checked in today
   const myTodayRecord = attendance.find((a) => a.studentId === safeStudent.id && a.date === today);

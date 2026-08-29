@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Receipt,
   Search,
@@ -117,6 +117,18 @@ export const StudentBillingView: React.FC<StudentBillingViewProps> = ({
     item: StudentBillingItem;
     sessions: AttendanceRecord[];
   } | null>(null);
+
+  // Close modals on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (paymentModalStudent) setPaymentModalStudent(null);
+        if (detailModalStudent) setDetailModalStudent(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [paymentModalStudent, detailModalStudent]);
 
   const canEdit = userRole === 'owner';
   const isSiswaRole = userRole === 'siswa';
@@ -1044,8 +1056,14 @@ export const StudentBillingView: React.FC<StudentBillingViewProps> = ({
 
       {/* MODAL 1: FORM PEMBAYARAN TAGIHAN CEPAT (FAST PAYMENT MODAL) */}
       {paymentModalStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
-          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8 animate-in zoom-in-95 duration-200">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in cursor-pointer"
+          onClick={() => setPaymentModalStudent(null)}
+        >
+          <div 
+            className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8 animate-in zoom-in-95 duration-200 cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
             <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1265,8 +1283,14 @@ export const StudentBillingView: React.FC<StudentBillingViewProps> = ({
 
       {/* MODAL 2: RINCIAN SESI KEHADIRAN SISWA */}
       {detailModalStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
-          <div className="w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8 animate-in zoom-in-95 duration-200">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in cursor-pointer"
+          onClick={() => setDetailModalStudent(null)}
+        >
+          <div 
+            className="w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8 animate-in zoom-in-95 duration-200 cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center">
