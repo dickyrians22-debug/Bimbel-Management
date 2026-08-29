@@ -469,19 +469,19 @@ export const StudentBillingView: React.FC<StudentBillingViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 pb-12">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300 pb-12">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm">
         <div>
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-inner">
-              <Receipt className="w-6 h-6" />
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-inner shrink-0">
+              <Receipt className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900 font-heading">
+              <h2 className="text-base sm:text-xl font-bold text-slate-900 font-heading">
                 Tagihan Siswa (Skema Belajar Dulu Baru Bayar)
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
                 Otomatis dihitung dari jumlah kehadiran hadir riil siswa × tarif per sesi periode {getMonthNameIndo(selectedMonth)} {selectedYear}
               </p>
             </div>
@@ -489,10 +489,10 @@ export const StudentBillingView: React.FC<StudentBillingViewProps> = ({
         </div>
 
         {/* Action Controls & Period Pickers */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
           {/* Month Selector */}
-          <div className="flex items-center gap-1.5 bg-slate-50 p-1.5 rounded-2xl border border-slate-200">
-            <Calendar className="w-4 h-4 text-slate-500 ml-1.5" />
+          <div className="flex items-center gap-1.5 bg-slate-50 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border border-slate-200">
+            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 ml-1.5 shrink-0" />
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(Number(e.target.value))}
@@ -519,40 +519,40 @@ export const StudentBillingView: React.FC<StudentBillingViewProps> = ({
           <button
             id="btn-export-billing-excel"
             onClick={handleExportExcel}
-            className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+            className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-xs"
             title="Unduh rekap tagihan siswa ke format Excel (.xlsx)"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            Download Excel (.xlsx)
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Excel (.xlsx)</span>
           </button>
 
           <button
             id="btn-export-billing-png"
             onClick={handleExportPng}
             disabled={isExportingPng}
-            className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300/80 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-xs disabled:opacity-50"
+            className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300/80 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-xs disabled:opacity-50"
             title="Unduh format tabel rekap tagihan siswa sebagai gambar PNG"
           >
-            <ImageIcon className="w-4 h-4 text-amber-700" />
-            <span>{isExportingPng ? 'Menyimpan...' : 'Unduh Gambar (PNG)'}</span>
+            <ImageIcon className="w-4 h-4 text-amber-700 shrink-0" />
+            <span>{isExportingPng ? 'Menyimpan...' : 'PNG'}</span>
           </button>
         </div>
       </div>
 
       {/* Summary KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Card 1: Total Tagihan Periode Ini */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">
               Total Tagihan ({getMonthNameIndo(selectedMonth)})
             </span>
             <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-indigo-900 font-mono">
+          <div className="mt-2 sm:mt-3">
+            <h3 className="text-xl sm:text-2xl font-black text-indigo-900 font-mono">
               {formatRupiah(summary.grandTotalBill)}
             </h3>
             <p className="text-[11px] text-slate-500 mt-1">
@@ -562,20 +562,20 @@ export const StudentBillingView: React.FC<StudentBillingViewProps> = ({
         </div>
 
         {/* Card 2: Sudah Diterima / Dibayar */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">
               Sudah Diterima (Kas Masuk)
             </span>
             <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-emerald-700 font-mono">
+          <div className="mt-2 sm:mt-3">
+            <h3 className="text-xl sm:text-2xl font-black text-emerald-700 font-mono">
               {formatRupiah(summary.grandTotalPaid)}
             </h3>
-            <p className="text-[11px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
+            <p className="text-[11px] text-emerald-600 font-medium mt-1 flex items-center gap-1 flex-wrap">
               <span>{summary.countLunas} Siswa Lunas</span>
               {summary.countSebagian > 0 && <span>• {summary.countSebagian} Cicilan</span>}
             </p>
@@ -583,38 +583,38 @@ export const StudentBillingView: React.FC<StudentBillingViewProps> = ({
         </div>
 
         {/* Card 3: Piutang / Belum Bayar */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">
               Sisa Piutang (Belum Bayar)
             </span>
             <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
               <Clock className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-amber-600 font-mono">
+          <div className="mt-2 sm:mt-3">
+            <h3 className="text-xl sm:text-2xl font-black text-amber-600 font-mono">
               {formatRupiah(summary.grandTotalRemaining)}
             </h3>
             <p className="text-[11px] text-amber-700 font-medium mt-1">
-              {summary.countBelumBayar} Siswa belum melakukan pembayaran
+              {summary.countBelumBayar} Siswa belum bayar
             </p>
           </div>
         </div>
 
         {/* Card 4: Status Progress Tagihan */}
-        <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-5 rounded-2xl shadow-sm flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-4 sm:p-5 rounded-2xl shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-indigo-200">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-indigo-200">
               Rasio Pelunasan Periode Ini
             </span>
             <div className="w-8 h-8 rounded-xl bg-white/10 text-emerald-300 flex items-center justify-center">
               <Sparkles className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
+          <div className="mt-2 sm:mt-3">
             <div className="flex items-baseline justify-between">
-              <h3 className="text-2xl font-black text-white font-mono">
+              <h3 className="text-xl sm:text-2xl font-black text-white font-mono">
                 {summary.grandTotalBill > 0
                   ? `${Math.round((summary.grandTotalPaid / summary.grandTotalBill) * 100)}%`
                   : '100%'}

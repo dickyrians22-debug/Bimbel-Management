@@ -73,13 +73,13 @@ export const DashboardTutor: React.FC<DashboardTutorProps> = ({
   const activeStudents = students.filter((s) => s.status === 'Aktif');
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
       {/* Top Header & Actions */}
-      <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+      <div className="bg-white rounded-2xl p-4 sm:p-7 border border-slate-200/90 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
           <div className="space-y-1.5">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-teal-50 border border-teal-100 text-teal-700 text-xs font-semibold">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-teal-50 border border-teal-100 text-teal-700 text-[11px] sm:text-xs font-semibold">
                 <GraduationCap className="w-3.5 h-3.5" />
                 {tutorBadge}
               </span>
@@ -87,19 +87,19 @@ export const DashboardTutor: React.FC<DashboardTutorProps> = ({
                 {formatDateIndo(today)}
               </span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+            <h2 className="text-xl sm:text-3xl font-bold tracking-tight text-slate-900">
               {tutorTitle}
             </h2>
-            <p className="text-slate-500 text-sm max-w-2xl font-normal leading-relaxed">
+            <p className="text-slate-500 text-xs sm:text-sm max-w-2xl font-normal leading-relaxed">
               {tutorMessage}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 pt-2 lg:pt-0">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-1 lg:pt-0">
             {onOpenChangePasswordModal && (
               <button
                 onClick={onOpenChangePasswordModal}
-                className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                className="px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
                 title="Ganti Password Akun Tutor"
               >
                 <KeyRound className="w-3.5 h-3.5 text-slate-500" />
@@ -108,14 +108,14 @@ export const DashboardTutor: React.FC<DashboardTutorProps> = ({
             )}
             <button
               onClick={() => onOpenAttendanceModal()}
-              className="px-3.5 py-2 bg-teal-50 hover:bg-teal-100/80 border border-teal-200 text-teal-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+              className="px-3 py-2 bg-teal-50 hover:bg-teal-100/80 border border-teal-200 text-teal-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5 text-teal-600" />
               + Input Absensi
             </button>
             <button
               onClick={onOpenBatchAttendanceModal}
-              className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+              className="px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
             >
               <CheckSquare className="w-3.5 h-3.5 text-indigo-600" />
               Absen Batch
@@ -125,39 +125,39 @@ export const DashboardTutor: React.FC<DashboardTutorProps> = ({
       </div>
 
       {/* Tutor Mini KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition">
+          <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400">
             Siswa Hadir Hari Ini
           </span>
-          <div className="mt-2 flex items-baseline gap-2">
-            <h3 className="text-2xl font-bold tracking-tight text-slate-900">
+          <div className="mt-1.5 sm:mt-2 flex items-baseline gap-2">
+            <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               {todayAttendance.filter((a) => a.status === 'Hadir').length}
             </h3>
             <span className="text-xs text-slate-400">Siswa hadir</span>
           </div>
-          <p className="text-xs text-teal-700 font-medium mt-1">Tanggal {formatDateIndo(today)}</p>
+          <p className="text-[11px] sm:text-xs text-teal-700 font-medium mt-1">Tanggal {formatDateIndo(today)}</p>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition">
+          <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400">
             Sesi Mengajar Saya
           </span>
-          <div className="mt-2 flex items-baseline gap-2">
-            <h3 className="text-2xl font-bold tracking-tight text-slate-900">
+          <div className="mt-1.5 sm:mt-2 flex items-baseline gap-2">
+            <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               {myMonthSessions.length}
             </h3>
             <span className="text-xs text-slate-400">Sesi bulan ini</span>
           </div>
-          <p className="text-xs text-indigo-700 font-medium mt-1">Bulan {currentMonth} / {currentYear}</p>
+          <p className="text-[11px] sm:text-xs text-indigo-700 font-medium mt-1">Bulan {currentMonth} / {currentYear}</p>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition">
+          <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400">
             Total Siswa Terdaftar
           </span>
-          <div className="mt-2 flex items-baseline gap-2">
-            <h3 className="text-2xl font-bold tracking-tight text-slate-900">
+          <div className="mt-1.5 sm:mt-2 flex items-baseline gap-2">
+            <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               {activeStudents.length}
             </h3>
             <span className="text-xs text-slate-400">Siswa aktif</span>

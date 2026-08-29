@@ -119,13 +119,13 @@ export const DashboardOwner: React.FC<DashboardOwnerProps> = ({
   const plData = calculateAnnualPL(currentYear, attendance, incomes, expenses);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
       {/* Top Minimalist Header & Quick Actions */}
-      <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+      <div className="bg-white rounded-2xl p-4 sm:p-7 border border-slate-200/90 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
           <div className="space-y-1.5">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-indigo-700 text-[11px] sm:text-xs font-semibold">
                 <Sparkles className="w-3.5 h-3.5" />
                 {ownerBadge}
               </span>
@@ -133,20 +133,20 @@ export const DashboardOwner: React.FC<DashboardOwnerProps> = ({
                 {formatDateIndo(today)}
               </span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+            <h2 className="text-xl sm:text-3xl font-bold tracking-tight text-slate-900">
               {ownerTitle}
             </h2>
-            <p className="text-slate-500 text-sm max-w-2xl font-normal leading-relaxed">
+            <p className="text-slate-500 text-xs sm:text-sm max-w-2xl font-normal leading-relaxed">
               {ownerMessage}
             </p>
           </div>
 
           {/* Quick Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2 pt-2 lg:pt-0">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-1 lg:pt-0">
             {onOpenChangePasswordModal && (
               <button
                 onClick={onOpenChangePasswordModal}
-                className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                className="px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
                 title="Ganti Password Akun Owner"
               >
                 <KeyRound className="w-3.5 h-3.5 text-slate-500" />
@@ -155,21 +155,21 @@ export const DashboardOwner: React.FC<DashboardOwnerProps> = ({
             )}
             <button
               onClick={() => onNavigate('student-billing')}
-              className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200 text-indigo-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+              className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100/80 border border-indigo-200 text-indigo-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
             >
               <Receipt className="w-3.5 h-3.5 text-indigo-600" />
               Tagihan Siswa
             </button>
             <button
               onClick={() => onNavigate('cash-book')}
-              className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+              className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
             >
               <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
               Buku Kas
             </button>
             <button
               onClick={onOpenStudentModal}
-              className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+              className="px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
             >
               <UserPlus className="w-3.5 h-3.5 text-indigo-600" />
               + Siswa Baru
@@ -179,59 +179,59 @@ export const DashboardOwner: React.FC<DashboardOwnerProps> = ({
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Card 1: Pemasukan Kas Bulan Ini */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition group">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition group">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400">
               Pemasukan ({MONTH_NAMES_ID[currentMonth - 1]})
             </span>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100/80">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-bold tracking-tight text-slate-900">
+          <div className="mt-2 sm:mt-3">
+            <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               {formatRupiah(totalMonthIncome)}
             </h3>
             <div className="flex items-center gap-1.5 mt-2">
-              <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+              <span className="inline-flex items-center gap-0.5 text-[11px] sm:text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
                 <ArrowUpRight className="w-3 h-3" />
                 {monthIncomes.length} Transaksi
               </span>
-              <span className="text-xs text-slate-400">bulan ini</span>
+              <span className="text-[11px] sm:text-xs text-slate-400">bulan ini</span>
             </div>
           </div>
         </div>
 
         {/* Card 2: Pengeluaran Kas Bulan Ini */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition group">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition group">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400">
               Pengeluaran ({MONTH_NAMES_ID[currentMonth - 1]})
             </span>
             <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-100/80">
               <TrendingDown className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-bold tracking-tight text-slate-900">
+          <div className="mt-2 sm:mt-3">
+            <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               {formatRupiah(totalMonthExpense)}
             </h3>
             <div className="flex items-center gap-1.5 mt-2">
-              <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">
+              <span className="inline-flex items-center gap-0.5 text-[11px] sm:text-xs font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">
                 <ArrowDownRight className="w-3 h-3" />
                 {monthExpenses.length} Beban
               </span>
-              <span className="text-xs text-slate-400">operasional</span>
+              <span className="text-[11px] sm:text-xs text-slate-400">operasional</span>
             </div>
           </div>
         </div>
 
         {/* Card 3: Sisa Kas Bersih (Net Cashflow) */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition group">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition group">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400">
               Sisa Kas Bersih
             </span>
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${
@@ -242,44 +242,44 @@ export const DashboardOwner: React.FC<DashboardOwnerProps> = ({
               <Wallet className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <h3 className={`text-2xl font-bold tracking-tight ${
+          <div className="mt-2 sm:mt-3">
+            <h3 className={`text-xl sm:text-2xl font-bold tracking-tight ${
               netCashFlow >= 0 ? 'text-indigo-900' : 'text-rose-600'
             }`}>
               {formatRupiah(netCashFlow)}
             </h3>
             <div className="flex items-center gap-1.5 mt-2">
-              <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-md border ${
+              <span className={`inline-flex items-center text-[11px] sm:text-xs font-semibold px-2 py-0.5 rounded-md border ${
                 netCashFlow >= 0 
                   ? 'text-indigo-700 bg-indigo-50 border-indigo-100' 
                   : 'text-rose-700 bg-rose-50 border-rose-100'
               }`}>
                 {netCashFlow >= 0 ? 'Surplus' : 'Defisit'}
               </span>
-              <span className="text-xs text-slate-400">arus kas riil</span>
+              <span className="text-[11px] sm:text-xs text-slate-400">arus kas riil</span>
             </div>
           </div>
         </div>
 
         {/* Card 4: Siswa Aktif & Hadir Hari Ini */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition group">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition group">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-400">
               Siswa & Presensi
             </span>
             <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200">
               <Users className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
+          <div className="mt-2 sm:mt-3">
             <div className="flex items-baseline gap-2">
-              <h3 className="text-2xl font-bold tracking-tight text-slate-900">
+              <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
                 {activeStudents.length}
               </h3>
               <span className="text-xs text-slate-400 font-medium">Siswa Aktif</span>
             </div>
             <div className="flex items-center gap-1.5 mt-2">
-              <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+              <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
                 <CheckCircle2 className="w-3 h-3" />
                 {todayPresent} Hadir Hari Ini
               </span>

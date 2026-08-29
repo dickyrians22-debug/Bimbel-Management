@@ -351,19 +351,19 @@ export const CashBookView: React.FC<CashBookViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 pb-12">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300 pb-12">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm">
         <div>
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center shadow-inner">
-              <BookOpen className="w-6 h-6" />
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center shadow-inner shrink-0">
+              <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900 font-heading">
+              <h2 className="text-base sm:text-xl font-bold text-slate-900 font-heading">
                 Buku Kas Utama & Arus Kas
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
                 Pencatatan mutasi kas terpadu (Kas Masuk & Kas Keluar) dengan saldo berjalan otomatis
               </p>
             </div>
@@ -371,22 +371,22 @@ export const CashBookView: React.FC<CashBookViewProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
           {canEdit && (
             <>
               <button
                 onClick={() => onOpenIncomeModal()}
-                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm cursor-pointer"
+                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm cursor-pointer"
               >
-                <PlusCircle className="w-4 h-4" />
-                + Catat Kas Masuk
+                <PlusCircle className="w-4 h-4 shrink-0" />
+                <span>+ Kas Masuk</span>
               </button>
               <button
                 onClick={() => onOpenExpenseModal()}
-                className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm cursor-pointer"
+                className="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm cursor-pointer"
               >
-                <MinusCircle className="w-4 h-4" />
-                - Catat Kas Keluar
+                <MinusCircle className="w-4 h-4 shrink-0" />
+                <span>- Kas Keluar</span>
               </button>
             </>
           )}
@@ -394,40 +394,40 @@ export const CashBookView: React.FC<CashBookViewProps> = ({
           <button
             id="btn-export-cashbook-excel"
             onClick={handleExportExcel}
-            className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+            className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-xs"
             title="Unduh seluruh mutasi buku kas ke format Excel (.xlsx)"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            Download Excel (.xlsx)
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Excel (.xlsx)</span>
           </button>
 
           <button
             id="btn-export-cashbook-png"
             onClick={handleExportPng}
             disabled={isExportingPng}
-            className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300/80 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-xs disabled:opacity-50"
+            className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300/80 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-xs disabled:opacity-50"
             title="Unduh visual buku kas sebagai gambar PNG"
           >
-            <ImageIcon className="w-4 h-4 text-amber-700" />
-            <span>{isExportingPng ? 'Menyimpan...' : 'Unduh Gambar (PNG)'}</span>
+            <ImageIcon className="w-4 h-4 text-amber-700 shrink-0" />
+            <span>{isExportingPng ? 'Menyimpan...' : 'PNG'}</span>
           </button>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Card 1: Total Kas Masuk */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">
               Total Kas Masuk (Debit)
             </span>
             <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
               <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-emerald-700 font-mono">
+          <div className="mt-2 sm:mt-3">
+            <h3 className="text-xl sm:text-2xl font-black text-emerald-700 font-mono">
               {formatRupiah(summary.totalIn)}
             </h3>
             <p className="text-[11px] text-slate-500 mt-1">
@@ -437,17 +437,17 @@ export const CashBookView: React.FC<CashBookViewProps> = ({
         </div>
 
         {/* Card 2: Total Kas Keluar */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">
               Total Kas Keluar (Kredit)
             </span>
             <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center">
               <ArrowDownRight className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-rose-700 font-mono">
+          <div className="mt-2 sm:mt-3">
+            <h3 className="text-xl sm:text-2xl font-black text-rose-700 font-mono">
               {formatRupiah(summary.totalOut)}
             </h3>
             <p className="text-[11px] text-slate-500 mt-1">
@@ -457,17 +457,17 @@ export const CashBookView: React.FC<CashBookViewProps> = ({
         </div>
 
         {/* Card 3: Arus Kas Bersih */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">
               Arus Kas Bersih (Net)
             </span>
             <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${summary.netFlow >= 0 ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700'}`}>
               <Scale className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <h3 className={`text-2xl font-black font-mono ${summary.netFlow >= 0 ? 'text-indigo-700' : 'text-amber-700'}`}>
+          <div className="mt-2 sm:mt-3">
+            <h3 className={`text-xl sm:text-2xl font-black font-mono ${summary.netFlow >= 0 ? 'text-indigo-700' : 'text-amber-700'}`}>
               {formatRupiah(summary.netFlow)}
             </h3>
             <p className="text-[11px] text-slate-500 mt-1">
@@ -477,17 +477,17 @@ export const CashBookView: React.FC<CashBookViewProps> = ({
         </div>
 
         {/* Card 4: Saldo Kas Berjalan */}
-        <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-5 rounded-2xl shadow-sm flex flex-col justify-between">
+        <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-4 sm:p-5 rounded-2xl shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-indigo-200">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-indigo-200">
               Saldo Akhir Kas & Bank
             </span>
             <div className="w-8 h-8 rounded-xl bg-white/15 text-indigo-200 flex items-center justify-center">
               <Wallet className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <h3 className="text-2xl font-black text-emerald-300 font-mono">
+          <div className="mt-2 sm:mt-3">
+            <h3 className="text-xl sm:text-2xl font-black text-emerald-300 font-mono">
               {formatRupiah(summary.latestBalance)}
             </h3>
             <p className="text-[11px] text-indigo-200 mt-1">
@@ -575,11 +575,11 @@ export const CashBookView: React.FC<CashBookViewProps> = ({
         </div>
 
         {/* Tab Pills for Fast Switch */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-          <div className="flex items-center gap-1.5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-2 border-t border-slate-100 gap-2 text-xs">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <button
               onClick={() => setFilterType('all')}
-              className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
                 filterType === 'all'
                   ? 'bg-slate-900 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -589,25 +589,25 @@ export const CashBookView: React.FC<CashBookViewProps> = ({
             </button>
             <button
               onClick={() => setFilterType('in')}
-              className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer flex items-center gap-1 ${
+              className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
                 filterType === 'in'
                   ? 'bg-emerald-600 text-white'
                   : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
               }`}
             >
-              <ArrowUpRight className="w-3.5 h-3.5" />
-              Kas Masuk ({incomes.length})
+              <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
+              <span>Kas Masuk ({incomes.length})</span>
             </button>
             <button
               onClick={() => setFilterType('out')}
-              className={`px-3 py-1 rounded-lg font-bold transition cursor-pointer flex items-center gap-1 ${
+              className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
                 filterType === 'out'
                   ? 'bg-rose-600 text-white'
                   : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
               }`}
             >
-              <ArrowDownRight className="w-3.5 h-3.5" />
-              Kas Keluar ({expenses.length})
+              <ArrowDownRight className="w-3.5 h-3.5 shrink-0" />
+              <span>Kas Keluar ({expenses.length})</span>
             </button>
           </div>
 
@@ -782,17 +782,17 @@ export const CashBookView: React.FC<CashBookViewProps> = ({
 
         {/* Pagination & Limit Footer */}
         {totalItems > 0 && (
-          <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-            {/* Page Size Selector */}
-            <div className="flex items-center gap-2 text-xs text-slate-600">
-              <span>Baris per halaman:</span>
+          <div className="p-3 sm:p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 text-xs">
+            {/* Page Size & Item Count Info */}
+            <div className="flex items-center gap-2 text-slate-600 flex-wrap justify-center sm:justify-start">
+              <span>Baris per hal:</span>
               <select
                 value={pageSize}
                 onChange={(e) => {
                   setPageSize(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-hidden transition cursor-pointer"
+                className="bg-white border border-slate-300 rounded-lg px-2 py-1 font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-hidden transition cursor-pointer"
               >
                 <option value={10}>10</option>
                 <option value={25}>25</option>
@@ -800,29 +800,33 @@ export const CashBookView: React.FC<CashBookViewProps> = ({
                 <option value={100}>100</option>
                 <option value={999999}>Semua ({totalItems})</option>
               </select>
+              <span className="text-slate-400">|</span>
+              <span className="text-[11px] sm:text-xs text-slate-500 font-medium">
+                {startIndex + 1} - {endIndex} dari <strong className="text-slate-700">{totalItems}</strong> data
+              </span>
             </div>
 
             {/* Quick Action: Tampilkan Lebih Banyak / Lebih Sedikit */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap justify-center">
               {totalItems > 10 && (
                 <>
                   {!isShowAll && endIndex < totalItems && (
                     <button
                       onClick={handleShowMore}
-                      className="px-3 py-1.5 bg-white border border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 text-slate-700 hover:text-indigo-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                      className="px-2.5 py-1.5 bg-white border border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 text-slate-700 hover:text-indigo-800 rounded-xl text-[11px] sm:text-xs font-bold flex items-center gap-1 transition cursor-pointer shadow-2xs"
                     >
-                      <ChevronDown className="w-3.5 h-3.5 text-indigo-600" />
-                      Tampilkan Lebih Banyak ({pageSize === 10 ? '25' : pageSize === 25 ? '50' : 'Semua'})
+                      <ChevronDown className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <span>+ Banyak ({pageSize === 10 ? '25' : pageSize === 25 ? '50' : 'Semua'})</span>
                     </button>
                   )}
 
                   {pageSize > 10 && (
                     <button
                       onClick={handleShowLess}
-                      className="px-3 py-1.5 bg-white border border-slate-300 hover:border-amber-400 hover:bg-amber-50 text-slate-700 hover:text-amber-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+                      className="px-2.5 py-1.5 bg-white border border-slate-300 hover:border-amber-400 hover:bg-amber-50 text-slate-700 hover:text-amber-800 rounded-xl text-[11px] sm:text-xs font-bold flex items-center gap-1 transition cursor-pointer shadow-2xs"
                     >
-                      <ChevronUp className="w-3.5 h-3.5 text-amber-600" />
-                      Tampilkan Lebih Sedikit (Kembali ke {pageSize > 25 ? '25' : '10'})
+                      <ChevronUp className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>- Sedikit ({pageSize > 25 ? '25' : '10'})</span>
                     </button>
                   )}
                 </>
@@ -831,14 +835,15 @@ export const CashBookView: React.FC<CashBookViewProps> = ({
 
             {/* Pagination Controls */}
             {!isShowAll && totalPages > 1 && (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                   disabled={safeCurrentPage === 1}
-                  className="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
+                  className="p-1.5 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
+                  title="Halaman Sebelumnya"
                 >
                   <ChevronLeft className="w-4 h-4" />
-                  Sebelumnya
+                  <span className="hidden sm:inline">Sebelumnya</span>
                 </button>
 
                 {/* Page Number Indicators */}
@@ -856,7 +861,7 @@ export const CashBookView: React.FC<CashBookViewProps> = ({
                           {isGap && <span className="px-1 text-slate-400 text-xs font-bold">...</span>}
                           <button
                             onClick={() => setCurrentPage(p)}
-                            className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+                            className={`min-w-[28px] sm:min-w-[32px] h-7 sm:h-8 px-1.5 sm:px-2 rounded-lg text-xs font-bold transition cursor-pointer ${
                               safeCurrentPage === p
                                 ? 'bg-indigo-600 text-white shadow-xs'
                                 : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
@@ -872,9 +877,10 @@ export const CashBookView: React.FC<CashBookViewProps> = ({
                 <button
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                   disabled={safeCurrentPage === totalPages}
-                  className="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
+                  className="p-1.5 sm:px-2.5 sm:py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
+                  title="Halaman Selanjutnya"
                 >
-                  Selanjutnya
+                  <span className="hidden sm:inline">Selanjutnya</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>

@@ -1281,7 +1281,7 @@ export default function App() {
         />
 
         {/* Main View Area */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 min-h-0">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 min-h-0">
           {/* TAB 1: DASHBOARD (Role-Based Display) */}
           {currentTab === 'dashboard' && currentUser.role === 'owner' && (
             <DashboardOwner

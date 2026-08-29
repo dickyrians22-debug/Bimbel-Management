@@ -128,60 +128,60 @@ export const StudentDatabaseView: React.FC<StudentDatabaseViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm">
         <div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900 font-heading">Database Siswa Bimbel</h2>
-              <p className="text-xs text-slate-500">
+              <h2 className="text-base sm:text-xl font-bold text-slate-900 font-heading">Database Siswa Bimbel</h2>
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
                 Kelola data lengkap peserta didik, tingkat kelas, tarif per sesi, dan kontak orang tua
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
           {canEdit && onResetStudents && (
             <button
               onClick={onResetStudents}
               title="Perbarui / Muat ulang 25 data siswa lengkap sesuai daftar bimbel"
-              className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+              className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
             >
-              <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
-              Sinkronkan 25 Siswa Baru
+              <RotateCcw className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span>Sinkronkan 25 Siswa</span>
             </button>
           )}
 
           <button
             id="btn-export-students-excel"
             onClick={handleExportExcel}
-            className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+            className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-xs"
             title="Unduh seluruh data siswa ke format Excel (.xlsx)"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            Download Excel (.xlsx)
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Excel (.xlsx)</span>
           </button>
 
           {canEdit && (
             <button
               id="add-student-btn"
               onClick={() => onOpenStudentModal()}
-              className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/25 flex items-center gap-1.5 transition cursor-pointer"
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/25 flex items-center gap-1.5 transition cursor-pointer"
             >
-              <UserPlus className="w-4 h-4" />
-              + Tambah Siswa Baru
+              <UserPlus className="w-4 h-4 shrink-0" />
+              <span>+ Tambah Siswa</span>
             </button>
           )}
         </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         {/* Search */}
         <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />

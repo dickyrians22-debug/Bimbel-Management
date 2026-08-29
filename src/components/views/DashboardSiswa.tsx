@@ -89,13 +89,13 @@ export const DashboardSiswa: React.FC<DashboardSiswaProps> = ({
   );
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
       {/* Student Top Header & Action */}
-      <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/90 shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+      <div className="bg-white rounded-2xl p-4 sm:p-7 border border-slate-200/90 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
           <div className="space-y-1.5">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-50 border border-amber-200/70 text-amber-800 text-xs font-semibold">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-50 border border-amber-200/70 text-amber-800 text-[11px] sm:text-xs font-semibold">
                 <Sparkles className="w-3.5 h-3.5 text-amber-600" />
                 {studentBadge}
               </span>
@@ -103,18 +103,18 @@ export const DashboardSiswa: React.FC<DashboardSiswaProps> = ({
                 {formatDateIndo(today)}
               </span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+            <h2 className="text-xl sm:text-3xl font-bold tracking-tight text-slate-900">
               {studentTitle}
             </h2>
-            <p className="text-slate-500 text-sm max-w-2xl font-normal leading-relaxed">
+            <p className="text-slate-500 text-xs sm:text-sm max-w-2xl font-normal leading-relaxed">
               {studentMessage}
             </p>
           </div>
 
           {/* Big Self-Attendance & Password Buttons */}
-          <div className="flex flex-wrap items-center gap-2.5 pt-2 lg:pt-0">
+          <div className="flex flex-wrap items-center gap-2 pt-1 lg:pt-0">
             {myTodayRecord ? (
-              <div className="px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-2.5">
+              <div className="px-3.5 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <div className="text-left">
                   <p className="text-xs font-semibold text-emerald-900">
@@ -129,7 +129,7 @@ export const DashboardSiswa: React.FC<DashboardSiswaProps> = ({
               <button
                 id="self-attendance-trigger-btn"
                 onClick={onOpenSelfAttendanceModal}
-                className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl shadow-2xs flex items-center justify-center gap-2 transition cursor-pointer text-xs"
+                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl shadow-2xs flex items-center justify-center gap-2 transition cursor-pointer text-xs"
               >
                 <Sparkles className="w-4 h-4 text-amber-300" />
                 Absen Masuk Mandiri

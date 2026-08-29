@@ -65,20 +65,23 @@ export const Navbar: React.FC<NavbarProps> = ({
       case 'owner':
         return {
           label: 'OWNER (SUPER ADMIN)',
+          shortLabel: 'OWNER',
           bg: 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-amber-500/20',
-          icon: <ShieldCheck className="w-3.5 h-3.5" />,
+          icon: <ShieldCheck className="w-3.5 h-3.5 shrink-0" />,
         };
       case 'tutor':
         return {
           label: 'TUTOR / PENGAJAR',
+          shortLabel: 'TUTOR',
           bg: 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-teal-500/20',
-          icon: <GraduationCap className="w-3.5 h-3.5" />,
+          icon: <GraduationCap className="w-3.5 h-3.5 shrink-0" />,
         };
       case 'siswa':
         return {
           label: 'SISWA / ORANG TUA',
+          shortLabel: 'SISWA',
           bg: 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-indigo-500/20',
-          icon: <Users className="w-3.5 h-3.5" />,
+          icon: <Users className="w-3.5 h-3.5 shrink-0" />,
         };
     }
   };
@@ -87,24 +90,25 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="no-print sticky top-0 z-40 bg-slate-900 text-white border-b border-slate-800 shadow-xl shrink-0">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+      <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-14 sm:h-16 gap-1 sm:gap-4">
           {/* Left: Mobile Toggle & Brand */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
             <button
               onClick={onToggleMobileSidebar}
-              className="lg:hidden p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 focus:outline-none transition cursor-pointer"
+              className="lg:hidden p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 focus:outline-none transition cursor-pointer shrink-0"
+              title="Buka Menu"
             >
-              <Menu className="w-6 h-6" />
+              <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
 
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-amber-500 flex items-center justify-center font-black text-2xl text-white shadow-lg shadow-indigo-500/30">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-amber-500 flex items-center justify-center font-black text-lg sm:text-2xl text-white shadow-lg shadow-indigo-500/30 shrink-0">
                 {logoSymbol}
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-lg font-black tracking-tight font-heading text-white truncate max-w-[220px] sm:max-w-xs md:max-w-md">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <h1 className="text-xs sm:text-lg font-black tracking-tight font-heading text-white truncate max-w-[110px] xs:max-w-[160px] sm:max-w-xs md:max-w-md">
                     {bimbelName}
                   </h1>
                   {appVersionBadge && (
@@ -123,7 +127,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Right: Role Switcher, Clock, Cloud Status, Demo Reset, User Profile */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1 sm:gap-3 shrink-0">
             {/* Cloud Realtime Status */}
             <div
               title={isCloudConnected ? 'Cloud Firebase Firestore Terhubung Realtime' : 'Mode Offline / Local Storage'}
@@ -150,7 +154,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {/* User Profile & Role Indicator Badge (Strict Access - No Quick Switch) */}
-            <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-xs">
+            <div className="flex items-center gap-1.5 sm:gap-2.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-xs">
               <UserAvatar
                 avatar={currentUser.avatar}
                 name={currentUser.name}
@@ -167,10 +171,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </p>
               </div>
               <span
-                className={`inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-1 rounded-xl shadow-xs ${badge.bg}`}
+                className={`inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-extrabold px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-lg sm:rounded-xl shadow-xs ${badge.bg}`}
               >
                 {badge.icon}
-                <span className="tracking-wider">{badge.label}</span>
+                <span className="sm:hidden tracking-wider">{badge.shortLabel}</span>
+                <span className="hidden sm:inline tracking-wider">{badge.label}</span>
               </span>
             </div>
 
@@ -179,7 +184,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={onOpenChangePasswordModal}
                 title={`Ganti Kata Sandi (${currentUser?.name || 'Pengguna'})`}
-                className="p-2 rounded-xl text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition cursor-pointer"
+                className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition cursor-pointer"
               >
                 <KeyRound className="w-4 h-4" />
               </button>
@@ -189,7 +194,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={onLogout}
               title="Keluar dari Akun (Logout)"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/80 text-rose-300 border border-rose-800/60 hover:border-rose-700 text-xs font-bold transition cursor-pointer active:scale-95"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/80 text-rose-300 border border-rose-800/60 hover:border-rose-700 text-xs font-bold transition cursor-pointer active:scale-95 shrink-0"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Keluar</span>
