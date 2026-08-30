@@ -258,6 +258,13 @@ export default function App() {
             await replaceAllInCollection(COLLECTIONS.STUDENTS, INITIAL_STUDENTS);
             await replaceAllInCollection(COLLECTIONS.USERS, DEFAULT_ACCOUNTS);
           }
+
+          // If Firestore contains fewer than 170 attendance records, sync the complete attendance logs
+          const attendanceCount = await checkCollectionCount(COLLECTIONS.ATTENDANCE);
+          if (attendanceCount < 170) {
+            console.log('Updating Firestore with 170 attendance records...');
+            await replaceAllInCollection(COLLECTIONS.ATTENDANCE, INITIAL_ATTENDANCE);
+          }
         }
       } catch (e) {
         console.warn('Initial cloud seed check:', e);
@@ -1259,7 +1266,6 @@ export default function App() {
         onSwitchUser={handleSwitchUser}
         onLogout={handleLogout}
         onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-        onResetData={handleResetAllData}
         todayAttendanceCount={todayAttendanceCount}
         totalStudentsCount={students.length}
         onOpenChangePasswordModal={() => handleOpenChangePasswordModal(currentUser)}
@@ -1493,6 +1499,7 @@ export default function App() {
         students={students}
         currentUserName={currentUser.name}
         users={users}
+        attendance={attendance}
       />
 
       {/* 4. Self Attendance Modal (For Siswa) */}

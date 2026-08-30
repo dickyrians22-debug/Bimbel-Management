@@ -3,13 +3,10 @@ import {
   ShieldCheck,
   GraduationCap,
   Users,
-  RotateCcw,
   LogOut,
   Clock,
   Menu,
   KeyRound,
-  Cloud,
-  CloudCheck,
 } from 'lucide-react';
 import { UserSession, UserRole, UserAccount, BimbelSettings } from '../../types';
 import { UserAvatar } from '../common/UserAvatar';
@@ -21,7 +18,7 @@ interface NavbarProps {
   isCloudConnected?: boolean;
   onSwitchUser?: (user: UserSession) => void;
   onLogout: () => void;
-  onResetData: () => void;
+  onResetData?: () => void;
   onToggleMobileSidebar: () => void;
   onOpenChangePasswordModal?: () => void;
   todayAttendanceCount?: number;
@@ -33,7 +30,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   settings,
   isCloudConnected = true,
   onLogout,
-  onResetData,
   onToggleMobileSidebar,
   onOpenChangePasswordModal,
 }) => {
@@ -142,16 +138,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Clock className="w-3.5 h-3.5 text-amber-400" />
               <span>{timeStr}</span>
             </div>
-
-            {/* Quick Demo Reset Data */}
-            <button
-              onClick={onResetData}
-              title="Reset Data Awal (Demo Mockup)"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-xs font-medium text-slate-300 border border-slate-700 transition cursor-pointer"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
-              <span className="hidden md:inline">Reset Demo</span>
-            </button>
 
             {/* User Profile & Role Indicator Badge (Strict Access - No Quick Switch) */}
             <div className="flex items-center gap-1.5 sm:gap-2.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl bg-slate-800/90 border border-slate-700/80 shadow-xs">

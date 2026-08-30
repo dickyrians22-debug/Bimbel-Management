@@ -137,7 +137,7 @@ export function getInitialAttendance(): AttendanceRecord[] {
       return INITIAL_ATTENDANCE;
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : INITIAL_ATTENDANCE;
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_ATTENDANCE;
   } catch (e) {
     return INITIAL_ATTENDANCE;
   }

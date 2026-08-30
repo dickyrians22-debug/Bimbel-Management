@@ -74,6 +74,7 @@ import {
   sendWhatsAppDirect,
 } from '../../utils/whatsapp';
 import { ConfirmDeleteModal } from '../modals/ConfirmDeleteModal';
+import { ResetFactoryModal } from '../modals/ResetFactoryModal';
 
 interface SettingsViewProps {
   users: UserAccount[];
@@ -208,6 +209,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [copiedTemplate, setCopiedTemplate] = useState(false);
 
   // In-App Confirmation & Notice Dialog states (Iframe-Safe)
+  const [isResetFactoryModalOpen, setIsResetFactoryModalOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -3518,25 +3520,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <RotateCcw className="w-6 h-6" />
               </div>
               <h3 className="text-sm font-bold text-slate-900 font-heading">
-                Reset ke Data Awal Pabrik
+                Reset ke Data Awal Pabrik (Kosongkan)
               </h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Kembalikan seluruh database ke data demonstrasi standar Bimbel Sigma. Semua data baru yang dibuat akan terhapus.
+                Kosongkan seluruh data operasional (presensi, siswa, transaksi kas SPP, honor, dan pengeluaran). Hanya menyisakan 3 akun dasar: <strong className="text-slate-700">Owner Bimbel</strong>, <strong className="text-slate-700">Tutor Bimbel</strong>, dan <strong className="text-slate-700">Siswa Bimbel</strong> agar siap diisi dari awal.
               </p>
             </div>
 
             <button
-              onClick={() => {
-                setDeleteDialog({
-                  isOpen: true,
-                  title: 'Reset ke Data Default Pabrik',
-                  message: 'PERINGATAN: Apakah Anda yakin ingin mereset seluruh data aplikasi ke data bawaan demo? Seluruh data baru dan perubahan yang Anda buat akan terhapus.',
-                  itemName: 'Seluruh Database Aplikasi',
-                  onConfirm: () => {
-                    onResetAllData();
-                  },
-                });
-              }}
+              id="open-reset-factory-modal-btn"
+              onClick={() => setIsResetFactoryModalOpen(true)}
               className="mt-6 w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-600/20 flex items-center justify-center gap-2 transition cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
@@ -3545,6 +3538,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* 2-Step Verification Modal for Factory Reset */}
+      <ResetFactoryModal
+        isOpen={isResetFactoryModalOpen}
+        onClose={() => setIsResetFactoryModalOpen(false)}
+        onConfirm={onResetAllData}
+      />
 
       {/* In-App Confirmation Modal (Safe for iframe / preview) */}
       <ConfirmDeleteModal

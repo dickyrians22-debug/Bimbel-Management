@@ -10,6 +10,7 @@ interface BatchAttendanceModalProps {
   students: Student[];
   currentUserName: string;
   users?: UserAccount[];
+  attendance?: AttendanceRecord[];
 }
 
 export const BatchAttendanceModal: React.FC<BatchAttendanceModalProps> = ({
@@ -19,6 +20,7 @@ export const BatchAttendanceModal: React.FC<BatchAttendanceModalProps> = ({
   students,
   currentUserName,
   users = [],
+  attendance = [],
 }) => {
   // Extract all registered tutors strictly from users database with role 'tutor' (Single Source of Truth)
   const tutorList = useMemo(() => {
@@ -50,16 +52,27 @@ export const BatchAttendanceModal: React.FC<BatchAttendanceModalProps> = ({
     'Tutor Bimbel'
   );
 
-  // Map student ID to attendance status & inclusion
-  const [studentStatuses, setStudentStatuses] = useState<Record<string, { included: boolean; status: AttendanceStatus }>>(
-    () => {
-      const initial: Record<string, { included: boolean; status: AttendanceStatus }> = {};
-      students.forEach((s) => {
-        initial[s.id] = { included: s.status === 'Aktif', status: 'Hadir' };
-      });
-      return initial;
-    }
-  );
+  // Map student ID to attendance status, inclusion, and custom session number
+  const [studentStatuses, setStudentStatuses] = useState<
+    Record<string, { included: boolean; status: AttendanceStatus; sessionNumber?: number }>
+  >(() => {
+    const initial: Record<string, { included: boolean; status: AttendanceStatus; sessionNumber?: number }> = {};
+    students.forEach((s) => {
+      initial[s.id] = { included: s.status === 'Aktif', status: 'Hadir' };
+    });
+    return initial;
+  });
+
+  // Calculate default auto-incremented session number for each student in the selected month
+  const getAutoSessionNumber = (studentId: string, inputDate: string) => {
+    if (!inputDate) return 1;
+    const [year, month] = inputDate.split('-');
+    const monthPrefix = `${year}-${month}`;
+    const previousAttendances = (attendance || []).filter(
+      (a) => a.studentId === studentId && a.date.startsWith(monthPrefix) && a.status === 'Hadir'
+    );
+    return previousAttendances.length + 1;
+  };
 
   // Close modal on Escape key press
   useEffect(() => {
@@ -106,6 +119,16 @@ export const BatchAttendanceModal: React.FC<BatchAttendanceModalProps> = ({
     }));
   };
 
+  const handleStudentSessionChange = (studentId: string, sessionNum: number) => {
+    setStudentStatuses((prev) => ({
+      ...prev,
+      [studentId]: {
+        ...(prev[studentId] || { included: true, status: 'Hadir' }),
+        sessionNumber: Math.max(1, sessionNum),
+      },
+    }));
+  };
+
   const handleStudentIncludeToggle = (studentId: string) => {
     setStudentStatuses((prev) => ({
       ...prev,
@@ -127,6 +150,9 @@ export const BatchAttendanceModal: React.FC<BatchAttendanceModalProps> = ({
     filteredStudents.forEach((std) => {
       const state = studentStatuses[std.id];
       if (state && state.included) {
+        const autoSess = getAutoSessionNumber(std.id, date);
+        const finalSession = state.sessionNumber && state.sessionNumber > 0 ? state.sessionNumber : autoSess;
+
         recordsToSave.push({
           date,
           time,
@@ -135,7 +161,7 @@ export const BatchAttendanceModal: React.FC<BatchAttendanceModalProps> = ({
           studentName: std.name,
           classType: std.classType,
           status: state.status,
-          sessionNumber: 1, // Will be maintained by auto-counting per student
+          sessionNumber: finalSession,
           topic: topic.trim(),
           tutorNotes: `Presensi Kolektif Kelas ${std.gradeDetail}`,
           tutorName: tutorName || currentUserName || 'Tutor Bimbel',
@@ -319,10 +345,13 @@ export const BatchAttendanceModal: React.FC<BatchAttendanceModalProps> = ({
               ) : (
                 filteredStudents.map((std) => {
                   const state = studentStatuses[std.id] || { included: false, status: 'Hadir' };
+                  const autoSession = getAutoSessionNumber(std.id, date);
+                  const currentSession = state.sessionNumber ?? autoSession;
+
                   return (
                     <div
                       key={std.id}
-                      className={`p-2.5 flex items-center justify-between transition ${
+                      className={`p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition ${
                         state.included ? 'bg-teal-50/40' : 'bg-white opacity-60'
                       }`}
                     >
@@ -331,43 +360,65 @@ export const BatchAttendanceModal: React.FC<BatchAttendanceModalProps> = ({
                           type="checkbox"
                           checked={state.included}
                           onChange={() => handleStudentIncludeToggle(std.id)}
-                          className="w-4 h-4 text-teal-600 rounded cursor-pointer"
+                          className="w-4 h-4 text-teal-600 rounded cursor-pointer shrink-0"
                         />
                         <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-slate-900">{std.name}</span>
-                            <span className="text-[10px] px-1.5 py-0.2 bg-slate-100 text-slate-600 font-mono rounded">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-slate-900 text-xs sm:text-sm">{std.name}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 font-mono rounded">
                               {std.code}
                             </span>
+                            {state.included && (
+                              <span className="text-[10px] px-2 py-0.5 bg-teal-100 text-teal-800 font-bold rounded-full flex items-center gap-1">
+                                <span>Sesi #{currentSession}</span>
+                              </span>
+                            )}
                           </div>
-                          <p className="text-[10px] text-slate-500">
+                          <p className="text-[10px] text-slate-500 mt-0.5">
                             {std.gradeDetail} • {std.classType} • {formatRupiah(std.pricePerSession)}/sesi
                           </p>
                         </div>
                       </div>
 
                       {state.included && (
-                        <div className="flex items-center gap-1">
-                          {(['Hadir', 'Izin', 'Sakit', 'Alpha'] as AttendanceStatus[]).map((st) => (
-                            <button
-                              key={st}
-                              type="button"
-                              onClick={() => handleStudentStatusChange(std.id, st)}
-                              className={`px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer ${
-                                state.status === st
-                                  ? st === 'Hadir'
-                                    ? 'bg-emerald-600 text-white'
-                                    : st === 'Izin'
-                                    ? 'bg-amber-500 text-white'
-                                    : st === 'Sakit'
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-rose-600 text-white'
-                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                              }`}
-                            >
-                              {st}
-                            </button>
-                          ))}
+                        <div className="flex items-center gap-2 self-end sm:self-center">
+                          {/* Session Number Stepper / Quick edit */}
+                          <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-700 shadow-2xs">
+                            <span className="text-slate-400">Ke-</span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={99}
+                              value={currentSession}
+                              onChange={(e) => handleStudentSessionChange(std.id, Number(e.target.value))}
+                              className="w-8 text-center font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-500 rounded bg-slate-50"
+                              title="Nomor sesi pertemuan siswa di bulan ini"
+                            />
+                          </div>
+
+                          {/* Status Buttons */}
+                          <div className="flex items-center gap-1">
+                            {(['Hadir', 'Izin', 'Sakit', 'Alpha'] as AttendanceStatus[]).map((st) => (
+                              <button
+                                key={st}
+                                type="button"
+                                onClick={() => handleStudentStatusChange(std.id, st)}
+                                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer ${
+                                  state.status === st
+                                    ? st === 'Hadir'
+                                      ? 'bg-emerald-600 text-white'
+                                      : st === 'Izin'
+                                      ? 'bg-amber-500 text-white'
+                                      : st === 'Sakit'
+                                      ? 'bg-blue-600 text-white'
+                                      : 'bg-rose-600 text-white'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                              >
+                                {st}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
