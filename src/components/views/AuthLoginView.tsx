@@ -52,11 +52,11 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
     setErrorMsg('');
   };
 
-  // Select account from helper directory
+  // Select account from helper directory (hanya isi role & username demi keamanan)
   const handlePickAccount = (acc: UserAccount) => {
     setSelectedRole(acc.role);
     setUsername(acc.username);
-    setPassword(acc.password || 'sigma123');
+    setPassword(''); // Keamanan: password tidak diisi otomatis, pengguna wajib memasukkan password manual
     setErrorMsg('');
     setShowAccountsDirectory(false);
   };
