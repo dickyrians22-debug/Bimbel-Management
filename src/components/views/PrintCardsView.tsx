@@ -21,6 +21,10 @@ import {
   BadgeCheck,
   MessageCircle,
   Image as ImageIcon,
+  Pencil,
+  RotateCcw,
+  Check,
+  X,
 } from 'lucide-react';
 import {
   Student,
@@ -97,6 +101,19 @@ export const PrintCardsView: React.FC<PrintCardsViewProps> = ({
   const [matrixFilterTutor, setMatrixFilterTutor] = useState<string>('Semua');
   const [matrixFilterStatus, setMatrixFilterStatus] = useState<'Aktif' | 'Semua'>('Aktif');
   const [matrixSearchTerm, setMatrixSearchTerm] = useState<string>('');
+
+  // --- CUSTOM EVALUATION / REKOMENDASI PENGAJAR (OWNER & TUTOR ONLY) ---
+  const [customEvaluations, setCustomEvaluations] = useState<Record<string, string>>(() => {
+    try {
+      const raw = localStorage.getItem('sigma_monthly_evaluations');
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [isEditingEvaluation, setIsEditingEvaluation] = useState(false);
+  const [evalDraftText, setEvalDraftText] = useState('');
+  const [evalSaveToast, setEvalSaveToast] = useState(false);
 
   // Print trigger
   const handlePrint = () => {
@@ -317,11 +334,114 @@ export const PrintCardsView: React.FC<PrintCardsViewProps> = ({
     }
   };
 
-  const bimbelName = settings?.bimbelName || 'BIMBEL SIGMA';
+  const bimbelName = settings?.bimbelName || 'RUMAH BELAJAR';
   const bimbelTagline = settings?.tagline || 'Belajar Sampai Paham, Bukan Sekadar Hafal';
-  const bimbelAddress = settings?.address || 'Alamat Lembaga Bimbel';
+  const bimbelAddress = settings?.address || 'Blora, Jawa Tengah';
   const bimbelPhone = settings?.phone || '-';
-  const ownerName = settings?.ownerName || 'Pimpinan Lembaga';
+  const effectiveCity = settings?.city || (settings?.address?.toLowerCase().includes('blora') ? 'Blora' : 'Blora');
+
+  // --- ACCURATE ROLE, NAME & POSITION RESOLUTION ---
+  const ownerAccount = users.find((u) => u.role === 'owner');
+  const effectiveOwnerName =
+    settings?.ownerName && settings.ownerName !== 'Owner Bimbel'
+      ? settings.ownerName
+      : ownerAccount?.name || 'Nanik Susilowati, M.Pd';
+
+  const effectiveOwnerTitle =
+    settings?.ownerTitle && settings.ownerTitle !== 'Pemilik & Direktur Lembaga'
+      ? settings.ownerTitle
+      : 'Pemilik & Kepala Lembaga';
+
+  const assignedTutorName = selectedStudent?.tutorName || '';
+  const matchingTutorAccount = users.find(
+    (u) => (assignedTutorName && u.name === assignedTutorName) || (u.role === 'tutor' && u.name)
+  );
+
+  const effectiveTutorName =
+    assignedTutorName ||
+    matchingTutorAccount?.name ||
+    (userRole === 'tutor' ? ownerAccount?.name : 'Nanik Susilowati, M.Pd');
+
+  const effectiveTutorTitle =
+    matchingTutorAccount?.specialty || 'Tutor Pembimbing / Pengajar';
+
+  const effectiveParentName =
+    selectedStudent?.parentName && selectedStudent.parentName.trim()
+      ? selectedStudent.parentName
+      : selectedStudent
+      ? `Wali dari ${selectedStudent.name}`
+      : 'Orang Tua / Wali Siswa';
+
+  const reportDateFormatted = `${effectiveCity}, ${new Date(selectedYear, selectedMonth, 0).getDate()} ${MONTH_NAMES_ID[selectedMonth - 1] || 'Agustus'} ${selectedYear}`;
+
+  // --- EVALUATION COMPUTATION & HANDLERS ---
+  const currentEvalKey = selectedStudent ? `${selectedStudent.id}_${selectedYear}_${selectedMonth}` : '';
+
+  const defaultAutoEvaluation = useMemo(() => {
+    if (!studentMonthlySummary || studentRecords.length === 0) {
+      return 'Belum ada catatan presensi belajar untuk siswa ini pada bulan berjalan.';
+    }
+    if (studentMonthlySummary.presentCount >= 8) {
+      return 'Siswa menunjukkan disiplin belajar dan kehadiran yang sangat baik. Pemahaman konsep dasar materi telah tercapai secara optimal dan siap melanjutkan ke materi tingkat berikutnya.';
+    }
+    if (studentMonthlySummary.presentCount >= 4) {
+      return 'Siswa aktif mengikuti proses bimbingan belajar dengan baik. Disarankan untuk terus mempertahankan konsistensi jadwal les dan rutin mengulang latihan soal mandiri di rumah.';
+    }
+    if (studentMonthlySummary.presentCount > 0) {
+      return 'Disarankan untuk terus meningkatkan konsistensi kehadiran agar materi kurikulum pembelajaran dapat diselesaikan secara berkesinambungan.';
+    }
+    return 'Disarankan untuk terus mempertahankan konsistensi jadwal les dan rutin mengulang latihan soal mandiri di rumah.';
+  }, [studentMonthlySummary, studentRecords]);
+
+  const activeEvaluationText = (currentEvalKey && customEvaluations[currentEvalKey]) || defaultAutoEvaluation;
+  const isUsingCustomEvaluation = Boolean(currentEvalKey && customEvaluations[currentEvalKey] && customEvaluations[currentEvalKey].trim());
+  const canEditEvaluation = userRole === 'owner' || userRole === 'tutor';
+
+  const handleStartEditEvaluation = () => {
+    setEvalDraftText(activeEvaluationText);
+    setIsEditingEvaluation(true);
+    setEvalSaveToast(false);
+  };
+
+  const handleSaveEvaluation = () => {
+    if (!currentEvalKey) return;
+    const trimmed = evalDraftText.trim();
+    const updated = {
+      ...customEvaluations,
+      [currentEvalKey]: trimmed,
+    };
+    setCustomEvaluations(updated);
+    try {
+      localStorage.setItem('sigma_monthly_evaluations', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save evaluation', e);
+    }
+    setIsEditingEvaluation(false);
+    setEvalSaveToast(true);
+    setTimeout(() => setEvalSaveToast(false), 3000);
+  };
+
+  const handleResetEvaluation = () => {
+    if (!currentEvalKey) return;
+    const updated = { ...customEvaluations };
+    delete updated[currentEvalKey];
+    setCustomEvaluations(updated);
+    try {
+      localStorage.setItem('sigma_monthly_evaluations', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to reset evaluation', e);
+    }
+    setIsEditingEvaluation(false);
+    setEvalSaveToast(true);
+    setTimeout(() => setEvalSaveToast(false), 3000);
+  };
+
+  const quickEvaluationPresets = [
+    'Siswa sangat fokus, aktif, dan cepat memahami materi baru.',
+    'Pemahaman konsep dasar sudah baik, perlu latihan mandiri di rumah.',
+    'Disiplin kehadiran sangat baik. Siap melangkah ke materi tingkat lanjutan.',
+    'Perlu penguatan pada ketelitian mengerjakan soal latihan bertahap.',
+  ];
 
   // Handle Send Student Report via WhatsApp
   const handleSendStudentReportWhatsApp = () => {
@@ -696,13 +816,13 @@ export const PrintCardsView: React.FC<PrintCardsViewProps> = ({
         {activeMode === 'mode-a' && modeALayout === 'full-a4' && selectedStudent && (
           <div
             id="printable-report-mode-a"
-            className="bg-white shadow-2xl print:shadow-none w-full max-w-[210mm] min-h-[297mm] p-8 sm:p-10 text-slate-800 flex flex-col justify-between border border-slate-300 print:border-none font-sans text-xs leading-relaxed"
+            className="bg-white shadow-2xl print:shadow-none w-full max-w-[210mm] min-h-[297mm] p-4 sm:p-8 md:p-10 text-slate-800 flex flex-col justify-between border border-slate-300 print:border-none font-sans text-xs leading-relaxed"
           >
             <div>
               {/* Kop Surat Resmi Bimbel */}
-              <div className="border-b-2 border-slate-800 pb-3 mb-4 flex items-center justify-between">
+              <div className="border-b-2 border-slate-800 pb-3 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-indigo-950 text-white font-black text-2xl flex items-center justify-center font-heading">
+                  <div className="w-12 h-12 rounded-xl bg-indigo-950 text-white font-black text-2xl flex items-center justify-center font-heading shrink-0">
                     Σ
                   </div>
                   <div>
@@ -717,7 +837,7 @@ export const PrintCardsView: React.FC<PrintCardsViewProps> = ({
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <span className="px-3 py-1 bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-lg text-xs font-extrabold uppercase tracking-wider inline-block">
                     LAPORAN PRESENSI & JURNAL BELAJAR
                   </span>
@@ -743,12 +863,12 @@ export const PrintCardsView: React.FC<PrintCardsViewProps> = ({
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-500 uppercase">Tutor Pembimbing</span>
-                  <p className="font-bold text-slate-800">{selectedStudent.tutorName || 'Tutor Bimbel Sigma'}</p>
-                  <p className="text-[10px] text-slate-500">Pengajar Utama</p>
+                  <p className="font-bold text-slate-800">{effectiveTutorName}</p>
+                  <p className="text-[10px] text-slate-500">{effectiveTutorTitle}</p>
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-500 uppercase">Orang Tua / Kontak</span>
-                  <p className="font-bold text-slate-800">{selectedStudent.parentName || '-'}</p>
+                  <p className="font-bold text-slate-800">{effectiveParentName}</p>
                   <p className="text-[10px] text-slate-500 font-mono">{selectedStudent.parentPhone || '-'}</p>
                 </div>
               </div>
@@ -799,108 +919,218 @@ export const PrintCardsView: React.FC<PrintCardsViewProps> = ({
 
               {/* TABEL LENGKAP SEMUA SESI BELAJAR (SEMUA BARIS TERTAMPILKAN) */}
               <div className="mb-4">
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-2">
                   <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                    <BookOpen className="w-3.5 h-3.5 text-indigo-700" />
-                    Daftar Pertemuan & Jurnal Materi Pembelajaran
+                    <BookOpen className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
+                    <span>Daftar Pertemuan & Jurnal Materi Pembelajaran</span>
                   </h3>
-                  <span className="text-[11px] font-bold text-indigo-900 font-mono">
+                  <span className="text-[10px] sm:text-[11px] font-bold text-indigo-900 font-mono bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200 self-start sm:self-auto whitespace-nowrap">
                     Total {studentRecords.length} Pertemuan Tercatat
                   </span>
                 </div>
 
-                <table className="w-full border-collapse border border-slate-400 text-xs">
-                  <thead>
-                    <tr className="bg-slate-100 border-b border-slate-400 text-slate-700 font-bold text-[11px]">
-                      <th className="py-1.5 px-2 border-r border-slate-300 w-8 text-center">No</th>
-                      <th className="py-1.5 px-2.5 border-r border-slate-300 w-28 text-left">Hari, Tgl & Jam</th>
-                      <th className="py-1.5 px-2.5 border-r border-slate-300 w-24 text-center">Status</th>
-                      <th className="py-1.5 px-2.5 border-r border-slate-300 text-left">Materi / Topik Pelajaran</th>
-                      <th className="py-1.5 px-2.5 border-r border-slate-300 w-32 text-left">Tutor Pengajar</th>
-                      <th className="py-1.5 px-2 border-r border-slate-300 w-44 text-left">Catatan & Evaluasi</th>
-                      <th className="py-1.5 px-2 w-14 text-center">Paraf</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-300">
-                    {studentRecords.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="text-center py-6 text-slate-400 italic">
-                          Belum ada log presensi belajar untuk siswa ini pada bulan {MONTH_NAMES_ID[selectedMonth - 1]} {selectedYear}.
-                        </td>
+                <div className="w-full overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-sm print:overflow-visible print:border-none print:shadow-none">
+                  <table className="w-full min-w-[620px] sm:min-w-full border-collapse text-xs print:min-w-0">
+                    <thead>
+                      <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold text-[11px]">
+                        <th className="py-2 px-2 border-r border-slate-300 w-8 text-center">No</th>
+                        <th className="py-2 px-2.5 border-r border-slate-300 w-28 text-left">Hari, Tgl & Jam</th>
+                        <th className="py-2 px-2.5 border-r border-slate-300 w-20 text-center">Status</th>
+                        <th className="py-2 px-2.5 border-r border-slate-300 text-left">Materi / Topik Pelajaran</th>
+                        <th className="py-2 px-2.5 border-r border-slate-300 w-32 text-left">Tutor Pengajar</th>
+                        <th className="py-2 px-2 border-r border-slate-300 w-44 text-left">Catatan & Evaluasi</th>
+                        <th className="py-2 px-2 w-14 text-center">Paraf</th>
                       </tr>
-                    ) : (
-                      studentRecords.map((record, index) => (
-                        <tr key={record.id} className="hover:bg-slate-50">
-                          <td className="py-1.5 px-2 border-r border-slate-300 text-center font-mono font-bold text-slate-600 text-[11px]">
-                            {index + 1}
-                          </td>
-                          <td className="py-1.5 px-2.5 border-r border-slate-300 text-[11px]">
-                            <div className="font-bold text-slate-800">{formatDateIndo(record.date)}</div>
-                            <div className="text-[10px] text-slate-500 font-mono">{record.time} WIB</div>
-                          </td>
-                          <td className="py-1.5 px-2.5 border-r border-slate-300 text-center">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                record.status === 'Hadir'
-                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                  : record.status === 'Izin'
-                                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                  : 'bg-rose-100 text-rose-800 border border-rose-200'
-                              }`}
-                            >
-                              {record.status}
-                            </span>
-                          </td>
-                          <td className="py-1.5 px-2.5 border-r border-slate-300 text-slate-900 font-medium text-[11px]">
-                            {record.topic}
-                          </td>
-                          <td className="py-1.5 px-2.5 border-r border-slate-300 text-slate-700 text-[11px]">
-                            {record.tutorName || selectedStudent.tutorName || 'Tutor Bimbel'}
-                          </td>
-                          <td className="py-1.5 px-2 border-r border-slate-300 text-slate-600 text-[10px] italic">
-                            {record.tutorNotes || 'Mengikuti bimbingan belajar dengan baik.'}
-                          </td>
-                          <td className="py-1.5 px-2 text-center font-mono text-[9px] text-slate-400">
-                            <span className="inline-block w-8 h-4 border-b border-dashed border-slate-400"></span>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {studentRecords.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="text-center py-6 text-slate-400 italic">
+                            Belum ada log presensi belajar untuk siswa ini pada bulan {MONTH_NAMES_ID[selectedMonth - 1]} {selectedYear}.
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        studentRecords.map((record, index) => (
+                          <tr key={record.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-2 px-2 border-r border-slate-200 text-center font-mono font-bold text-slate-600 text-[11px]">
+                              {index + 1}
+                            </td>
+                            <td className="py-2 px-2.5 border-r border-slate-200 text-[11px]">
+                              <div className="font-bold text-slate-800 whitespace-nowrap">{formatDateIndo(record.date)}</div>
+                              <div className="text-[10px] text-slate-500 font-mono">{record.time} WIB</div>
+                            </td>
+                            <td className="py-2 px-2.5 border-r border-slate-200 text-center">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold inline-block whitespace-nowrap ${
+                                  record.status === 'Hadir'
+                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                    : record.status === 'Izin'
+                                    ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                    : 'bg-rose-100 text-rose-800 border border-rose-200'
+                                }`}
+                              >
+                                {record.status}
+                              </span>
+                            </td>
+                            <td className="py-2 px-2.5 border-r border-slate-200 text-slate-900 font-medium text-[11px] break-words">
+                              {record.topic}
+                            </td>
+                            <td className="py-2 px-2.5 border-r border-slate-200 text-slate-700 text-[11px] whitespace-nowrap">
+                              {record.tutorName || selectedStudent.tutorName || 'Tutor Bimbel'}
+                            </td>
+                            <td className="py-2 px-2 border-r border-slate-200 text-slate-600 text-[10px] italic break-words">
+                              {record.tutorNotes || 'Mengikuti bimbingan belajar dengan baik.'}
+                            </td>
+                            <td className="py-2 px-2 text-center font-mono text-[9px] text-slate-400">
+                              <span className="inline-block w-8 h-4 border-b border-dashed border-slate-400"></span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
-              {/* Catatan Evaluasi Akhir Bulan */}
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-300 text-xs mb-4">
-                <span className="font-bold text-slate-800 uppercase text-[10px]">
-                  Catatan Evaluasi / Rekomendasi Pengajar:
-                </span>
-                <p className="text-slate-700 text-xs mt-1 leading-relaxed">
-                  {studentMonthlySummary && studentMonthlySummary.presentCount >= 8
-                    ? 'Siswa menunjukkan disiplin belajar dan kehadiran yang sangat baik. Pemahaman konsep dasar telah tercapai dan siap melanjutkan ke materi berikutnya.'
-                    : 'Disarankan untuk terus mempertahankan konsistensi jadwal les dan rutin mengulang latihan soal mandiri di rumah.'}
-                </p>
+              {/* Catatan Evaluasi Akhir Bulan (Dapat Diedit Manual oleh Owner & Tutor) */}
+              <div className="bg-slate-50/90 p-3.5 rounded-xl border border-slate-300 text-xs mb-4 relative transition-all">
+                {/* Header Bagian Evaluasi */}
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-slate-800 uppercase text-[10px] tracking-wide flex items-center gap-1.5">
+                      <BookOpen className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
+                      Catatan Evaluasi / Rekomendasi Pengajar:
+                    </span>
+                    {canEditEvaluation && (
+                      <span
+                        className={`text-[9px] font-semibold px-2 py-0.5 rounded-full border print:hidden ${
+                          isUsingCustomEvaluation
+                            ? 'bg-amber-50 text-amber-800 border-amber-300'
+                            : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                        }`}
+                      >
+                        {isUsingCustomEvaluation ? '✏️ Catatan Kustom Pengajar' : '✨ Rekomendasi Otomatis'}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Tombol Aksi untuk Owner & Tutor (Disembunyikan saat dicetak) */}
+                  {canEditEvaluation && !isEditingEvaluation && (
+                    <div className="flex items-center gap-1.5 print:hidden">
+                      {isUsingCustomEvaluation && (
+                        <button
+                          type="button"
+                          onClick={handleResetEvaluation}
+                          title="Kembalikan ke teks rekomendasi otomatis sistem"
+                          className="px-2 py-1 text-[10px] font-medium text-slate-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-300 hover:border-rose-200 rounded-lg flex items-center gap-1 transition-colors shadow-xs"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          <span className="hidden sm:inline">Reset Default</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleStartEditEvaluation}
+                        className="px-2.5 py-1 text-[10px] font-bold text-indigo-700 hover:text-indigo-900 bg-white hover:bg-indigo-50 border border-indigo-200 rounded-lg flex items-center gap-1 transition-colors shadow-xs"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        <span>Edit Catatan</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Notifikasi Simpan Berhasil */}
+                {evalSaveToast && (
+                  <div className="mb-2 p-1.5 px-2.5 bg-emerald-50 border border-emerald-300 text-emerald-800 text-[10px] font-bold rounded-lg flex items-center gap-1.5 animate-fadeIn print:hidden">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Catatan evaluasi belajar berhasil diperbarui dan tersimpan!</span>
+                  </div>
+                )}
+
+                {/* Mode Edit Form (Hanya saat Owner/Tutor klik Edit) */}
+                {canEditEvaluation && isEditingEvaluation ? (
+                  <div className="space-y-2 mt-1 print:hidden">
+                    <textarea
+                      value={evalDraftText}
+                      onChange={(e) => setEvalDraftText(e.target.value)}
+                      rows={3}
+                      placeholder="Tuliskan catatan evaluasi perkembangan belajar siswa, pemahaman materi, atau saran untuk orang tua..."
+                      className="w-full p-2.5 bg-white border-2 border-indigo-400 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 rounded-lg text-xs text-slate-800 leading-relaxed outline-hidden transition-all shadow-inner"
+                      autoFocus
+                    />
+
+                    {/* Template Cepat / Quick Presets */}
+                    <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                      <span className="text-[10px] font-bold text-slate-500 mr-1">Rekomendasi Cepat:</span>
+                      {quickEvaluationPresets.map((preset, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setEvalDraftText(preset);
+                          }}
+                          className="text-[9px] px-2 py-0.5 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-slate-700 hover:text-indigo-800 rounded-md transition-colors"
+                        >
+                          + {preset.slice(0, 30)}...
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Tombol Simpan & Batal */}
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingEvaluation(false)}
+                        className="px-3 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-200 border border-slate-300 rounded-lg flex items-center gap-1 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Batal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveEvaluation}
+                        className="px-3.5 py-1 text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-lg flex items-center gap-1.5 shadow-sm shadow-indigo-600/30 transition-all"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        Simpan Evaluasi
+                      </button>
+                    </div>
+
+                    {/* Teks tampilan khusus mode Print saat sedang diedit */}
+                    <p className="hidden print:block text-slate-700 text-xs mt-1 leading-relaxed">
+                      {activeEvaluationText}
+                    </p>
+                  </div>
+                ) : (
+                  /* Teks Evaluasi Bersih (Tampilan Normal & Hasil Print) */
+                  <p className="text-slate-700 text-xs mt-1 leading-relaxed font-normal">
+                    {activeEvaluationText}
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Tanda Tangan Resmi Footer */}
-            <div className="grid grid-cols-3 gap-6 text-center text-xs pt-4 border-t border-slate-300 mt-2">
+            <div className="grid grid-cols-3 gap-6 text-center text-xs pt-4 border-t border-slate-300">
               <div>
-                <p className="text-slate-500 mb-10">Orang Tua / Wali Siswa,</p>
-                <p className="font-bold text-slate-800 border-t border-slate-400 pt-1">
-                  ( {selectedStudent.parentName || '................................'} )
+                <p className="text-slate-600 font-semibold mb-14">Orang Tua / Wali Siswa,</p>
+                <p className="font-bold text-slate-900 border-t border-slate-400 pt-1">
+                  ( {effectiveParentName} )
                 </p>
               </div>
               <div>
-                <p className="text-slate-500 mb-10">Tutor Pembimbing,</p>
-                <p className="font-bold text-slate-800 border-t border-slate-400 pt-1">
-                  ( {selectedStudent.tutorName || 'Tutor Bimbel Sigma'} )
+                <p className="text-slate-600 font-semibold mb-14">Tutor Pembimbing,</p>
+                <p className="font-bold text-slate-900 border-t border-slate-400 pt-1">
+                  ( {effectiveTutorName} )
                 </p>
               </div>
               <div>
-                <p className="text-slate-500 mb-10">Kepala Bimbel Sigma,</p>
-                <p className="font-bold text-slate-800 border-t border-slate-400 pt-1">
-                  ( {ownerName} )
+                <p className="text-slate-600 font-semibold mb-14">
+                  {effectiveOwnerTitle || `Kepala ${bimbelName}`},
+                </p>
+                <p className="font-bold text-slate-900 border-t border-slate-400 pt-1">
+                  ( {effectiveOwnerName} )
                 </p>
               </div>
             </div>
@@ -916,129 +1146,148 @@ export const PrintCardsView: React.FC<PrintCardsViewProps> = ({
             className="w-full flex justify-center py-4 print:py-0 print:m-0"
           >
             <div
-              className="quarter-single-card bg-white border-2 border-dashed border-slate-400 p-4 rounded-xl flex flex-col justify-between text-slate-800 text-[11px] leading-tight shadow-xl print:shadow-none print:border-slate-800 w-full max-w-[105mm] min-h-[148mm] box-border"
+              className="quarter-single-card bg-white border-2 border-dashed border-slate-400 p-3.5 rounded-xl flex flex-col justify-between text-slate-800 text-[10px] leading-tight shadow-xl print:shadow-none print:border-slate-800 w-full max-w-[105mm] min-h-[148mm] box-border"
             >
-              {/* Header Kartu */}
-              <div className="border-b border-slate-300 pb-1.5 mb-1.5 flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-7 h-7 rounded bg-indigo-950 text-white font-black text-xs flex items-center justify-center font-heading shrink-0">
-                    Σ
+              {/* Bagian Atas: Header, Biodata, Rekap Kotak Kuning, dan Tabel Rekapan Siswa */}
+              <div className="space-y-2 flex-1">
+                {/* Header Kartu */}
+                <div className="border-b border-slate-300 pb-1.5 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-7 h-7 rounded bg-indigo-950 text-white font-black text-xs flex items-center justify-center font-heading shrink-0">
+                      Σ
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-indigo-950 text-xs tracking-tight">{bimbelName}</h4>
+                      <p className="text-[8px] font-bold text-amber-700 uppercase">
+                        {bimbelTagline}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-extrabold text-indigo-950 text-xs tracking-tight">{bimbelName}</h4>
-                    <p className="text-[8px] font-bold text-amber-700 uppercase">
-                      {bimbelTagline}
+                  <div className="text-right">
+                    <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-900">
+                      KARTU KONTROL (1/4 A4)
+                    </span>
+                    <p className="text-[9px] font-bold text-slate-700 mt-0.5">
+                      {MONTH_NAMES_ID[selectedMonth - 1]} {selectedYear}
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-900">
-                    KARTU KONTROL (1/4 A4)
-                  </span>
-                  <p className="text-[9px] font-bold text-slate-700 mt-0.5">
-                    {MONTH_NAMES_ID[selectedMonth - 1]} {selectedYear}
-                  </p>
-                </div>
-              </div>
 
-              {/* Info Siswa */}
-              <div className="grid grid-cols-2 gap-1.5 bg-slate-50 p-2 rounded-lg border border-slate-200 text-[10px] mb-1.5">
-                <div>
-                  <span className="text-slate-500 font-medium">Nama Siswa:</span>
-                  <p className="font-bold text-slate-900 truncate">{selectedStudent.name}</p>
-                  <p className="text-[9px] font-mono text-slate-500 font-semibold">NIS: {selectedStudent.code}</p>
+                {/* 1. Biodata Siswa */}
+                <div className="grid grid-cols-2 gap-1.5 bg-slate-50 p-2 rounded-lg border border-slate-200 text-[10px]">
+                  <div>
+                    <span className="text-slate-500 font-medium">Nama Siswa:</span>
+                    <p className="font-bold text-slate-900 truncate">{selectedStudent.name}</p>
+                    <p className="text-[9px] font-mono text-slate-500 font-semibold">NIS: {selectedStudent.code}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 font-medium">Program / Kelas:</span>
+                    <p className="font-bold text-indigo-800 truncate">{selectedStudent.gradeDetail}</p>
+                    <p className="text-[9px] text-slate-600 font-semibold">Kelas {selectedStudent.classType}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 font-medium">Tutor Pembimbing:</span>
+                    <p className="font-semibold text-slate-700 truncate">{effectiveTutorName}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 font-medium">Tarif Sesi:</span>
+                    <p className="font-bold text-emerald-700">{formatRupiah(selectedStudent.pricePerSession)}</p>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-slate-500 font-medium">Program / Kelas:</span>
-                  <p className="font-bold text-indigo-800 truncate">{selectedStudent.gradeDetail}</p>
-                  <p className="text-[9px] text-slate-600 font-semibold">Kelas {selectedStudent.classType}</p>
-                </div>
-                <div>
-                  <span className="text-slate-500 font-medium">Tutor Pembimbing:</span>
-                  <p className="font-semibold text-slate-700 truncate">{selectedStudent.tutorName || 'Tutor Bimbel'}</p>
-                </div>
-                <div>
-                  <span className="text-slate-500 font-medium">Tarif Sesi:</span>
-                  <p className="font-bold text-emerald-700">{formatRupiah(selectedStudent.pricePerSession)}</p>
-                </div>
-              </div>
 
-              {/* Tabel Rekap Sesi */}
-              <div className="my-1 overflow-visible">
-                <table className="w-full text-left text-[9px] border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100 border-b border-slate-300 text-slate-600 font-bold">
-                      <th className="py-1 px-1 w-5 text-center">#</th>
-                      <th className="py-1 px-1 w-20">Tgl & Jam</th>
-                      <th className="py-1 px-1 w-12 text-center">Status</th>
-                      <th className="py-1 px-1">Materi Pokok</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {studentRecords.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="text-center py-4 text-slate-400 italic text-[9px]">
-                          Belum ada catatan presensi di bulan ini
-                        </td>
+                {/* 2. Isi Rekapan Siswa (Tabel Presensi & Jurnal Belajar) */}
+                <div className="border border-slate-200 rounded-lg overflow-hidden my-1 bg-white">
+                  <table className="w-full text-left text-[9px] border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold">
+                        <th className="py-1 px-1.5 w-6 text-center">#</th>
+                        <th className="py-1 px-1.5 w-20">Tgl & Jam</th>
+                        <th className="py-1 px-1 text-center w-12">Status</th>
+                        <th className="py-1 px-1.5">Materi Pokok</th>
                       </tr>
-                    ) : (
-                      studentRecords.map((rec, idx) => (
-                        <tr key={rec.id} className="text-[9px] hover:bg-slate-50">
-                          <td className="py-0.5 px-1 text-center font-mono font-bold text-slate-500">{idx + 1}</td>
-                          <td className="py-0.5 px-1 font-mono text-[8px] whitespace-nowrap">
-                            {rec.date.slice(5)} {rec.time}
-                          </td>
-                          <td className="py-0.5 px-1 text-center font-bold">
-                            <span
-                              className={
-                                rec.status === 'Hadir'
-                                  ? 'text-emerald-700'
-                                  : rec.status === 'Izin'
-                                  ? 'text-amber-700'
-                                  : 'text-rose-700'
-                              }
-                            >
-                              {rec.status}
-                            </span>
-                          </td>
-                          <td className="py-0.5 px-1 text-slate-700 break-words">
-                            {rec.topic}
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {studentRecords.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="text-center py-6 text-slate-400 italic text-[9px]">
+                            Belum ada catatan presensi di bulan ini
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        studentRecords.map((rec, idx) => (
+                          <tr key={rec.id} className="text-[9px] hover:bg-slate-50">
+                            <td className="py-0.5 px-1.5 text-center font-mono font-bold text-slate-500">{idx + 1}</td>
+                            <td className="py-0.5 px-1.5 font-mono text-[8px] whitespace-nowrap">
+                              {rec.date.slice(5)} {rec.time}
+                            </td>
+                            <td className="py-0.5 px-1 text-center font-bold">
+                              <span
+                                className={
+                                  rec.status === 'Hadir'
+                                    ? 'text-emerald-700'
+                                    : rec.status === 'Izin'
+                                    ? 'text-amber-700'
+                                    : 'text-rose-700'
+                                }
+                              >
+                                {rec.status}
+                              </span>
+                            </td>
+                            <td className="py-0.5 px-1.5 text-slate-700 break-words leading-tight">
+                              {rec.topic}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 3. Box Rekap Kehadiran & Tagihan SPP (Kotak Kuning di Bawah Rekapan Presensi) */}
+                <div className="bg-amber-50/90 border border-amber-300 rounded-lg p-2 text-[9.5px]">
+                  <div className="flex items-center justify-between font-bold">
+                    <span className="text-slate-800">
+                      Kehadiran: <strong className="text-emerald-800">{studentMonthlySummary.presentCount} Hadir</strong>{' '}
+                      <span className="text-slate-500 font-normal">
+                        ({studentMonthlySummary.permissionCount + studentMonthlySummary.sickCount + studentMonthlySummary.alphaCount} Tidak Hadir)
+                      </span>
+                    </span>
+                    <span className="text-emerald-900 font-mono text-[10.5px] font-extrabold">
+                      Total: {formatRupiah(studentMonthlySummary.totalBilled)}
+                    </span>
+                  </div>
+                  <div className="text-[8.5px] text-slate-600 flex justify-between items-center mt-1 pt-1 border-t border-amber-200/80">
+                    <span>
+                      {studentMonthlySummary.presentCount} Sesi × {formatRupiah(selectedStudent.pricePerSession)}
+                    </span>
+                    <span className="font-bold">
+                      Status:{' '}
+                      <span
+                        className={
+                          studentMonthlySummary.paymentStatus === 'Lunas'
+                            ? 'text-emerald-700 font-extrabold'
+                            : 'text-rose-700 font-extrabold'
+                        }
+                      >
+                        {studentMonthlySummary.paymentStatus}
+                      </span>
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {/* Box Tagihan SPP */}
-              <div className="bg-amber-50/80 border border-amber-300 rounded-lg p-2 text-[9px] mb-2">
-                <div className="flex items-center justify-between font-bold">
-                  <span className="text-slate-700">
-                    Kehadiran: <strong className="text-emerald-800">{studentMonthlySummary.presentCount} Hadir</strong> ({studentMonthlySummary.permissionCount + studentMonthlySummary.sickCount + studentMonthlySummary.alphaCount} Tidak Hadir)
-                  </span>
-                  <span className="text-emerald-900 font-mono text-[10px] font-extrabold">
-                    Total: {formatRupiah(studentMonthlySummary.totalBilled)}
-                  </span>
-                </div>
-                <div className="text-[8px] text-slate-500 flex justify-between mt-0.5">
-                  <span>{studentMonthlySummary.presentCount} Sesi × {formatRupiah(selectedStudent.pricePerSession)}</span>
-                  <span className="font-bold text-slate-700">Status: {studentMonthlySummary.paymentStatus}</span>
-                </div>
-              </div>
-
-              {/* Tanda Tangan */}
-              <div className="grid grid-cols-2 gap-4 text-center text-[8px] pt-1.5 border-t border-slate-200">
+              {/* Bagian Bawah: Tanda Tangan Pocket Card */}
+              <div className="grid grid-cols-2 gap-4 text-center text-[8.5px] pt-2 border-t border-slate-200 mt-2">
                 <div>
-                  <p className="text-slate-500 mb-5">Orang Tua / Wali,</p>
-                  <p className="font-bold text-slate-800 border-t border-slate-300 pt-0.5">
-                    ( {selectedStudent.parentName?.split(' ')[0] || '....................'} )
+                  <p className="text-slate-600 font-semibold mb-6">Orang Tua / Wali,</p>
+                  <p className="font-bold text-slate-900 border-t border-slate-300 pt-0.5">
+                    ( {effectiveParentName} )
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-500 mb-5">Pengajar / Admin,</p>
-                  <p className="font-bold text-slate-800 border-t border-slate-300 pt-0.5">
-                    ( {selectedStudent.tutorName?.split(',')[0] || 'Bimbel Sigma'} )
+                  <p className="text-slate-600 font-semibold mb-6">{effectiveOwnerTitle || 'Tutor / Pengajar'},</p>
+                  <p className="font-bold text-slate-900 border-t border-slate-300 pt-0.5">
+                    ( {effectiveTutorName || effectiveOwnerName} )
                   </p>
                 </div>
               </div>
@@ -1334,15 +1583,17 @@ export const PrintCardsView: React.FC<PrintCardsViewProps> = ({
             {/* Tanda Tangan Footer */}
             <div className="grid grid-cols-2 gap-8 text-center text-xs pt-4 border-t border-slate-300 mt-2">
               <div>
-                <p className="text-slate-500 mb-12">Tutor Pengajar / Wali Kelas,</p>
-                <p className="font-bold text-slate-800 border-t border-slate-400 pt-1 inline-block min-w-[200px]">
-                  ( {matrixFilterTutor !== 'Semua' ? matrixFilterTutor : 'Tutor Bimbel Sigma'} )
+                <p className="text-slate-600 font-semibold mb-14">Tutor Pengajar / Wali Kelas,</p>
+                <p className="font-bold text-slate-900 border-t border-slate-400 pt-1 inline-block min-w-[220px]">
+                  ( {matrixFilterTutor !== 'Semua' ? matrixFilterTutor : effectiveTutorName} )
                 </p>
               </div>
               <div>
-                <p className="text-slate-500 mb-12">Kepala Bimbel Sigma,</p>
-                <p className="font-bold text-slate-800 border-t border-slate-400 pt-1 inline-block min-w-[200px]">
-                  ( {ownerName} )
+                <p className="text-slate-600 font-semibold mb-14">
+                  {effectiveOwnerTitle || `Kepala ${bimbelName}`},
+                </p>
+                <p className="font-bold text-slate-900 border-t border-slate-400 pt-1 inline-block min-w-[220px]">
+                  ( {effectiveOwnerName} )
                 </p>
               </div>
             </div>

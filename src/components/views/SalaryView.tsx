@@ -140,9 +140,11 @@ export const SalaryView: React.FC<SalaryViewProps> = ({
       'Honor Grup (Rp)': r.groupGrossHonor,
       'Uang Transport (Rp)': r.transportAllowance,
       'Bonus Kinerja (Rp)': r.bonus,
-      'Total Hak Honor (Rp)': r.netTotalSalary,
+      'Potongan Lebih Bayar Bulan Lalu (Rp)': r.previousOverpaymentDeduction || 0,
+      'Total Hak Honor Bersih (Rp)': r.netTotalSalary,
       'Sudah Dibayar (Rp)': r.paidAmount || 0,
       'Sisa Belum Bayar (Rp)': r.remainingAmount !== undefined ? r.remainingAmount : (r.status === 'Lunas' ? 0 : r.netTotalSalary),
+      'Kelebihan Bayar (Rp)': r.currentOverpayment || 0,
       'Status Pembayaran': r.status,
       'Metode Pencairan Terakhir': r.paymentMethod || '-',
     }));
@@ -292,8 +294,108 @@ export const SalaryView: React.FC<SalaryViewProps> = ({
 
   // Compute detailed salary for each tutor
   const tutorSalaryRecords: TutorSalaryRecord[] = useMemo(() => {
+    // Determine previous month and year for overpayment carry-over calculation
+    const prevMonth = selectedMonth === 1 ? 12 : selectedMonth - 1;
+    const prevYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear;
+    const prevMonthStr = String(prevMonth).padStart(2, '0');
+    const prevYearMonthPrefix = `${prevYear}-${prevMonthStr}`;
+
+    const prevMonthlyAttendances = attendances.filter((att) => {
+      if (att.status !== 'Hadir') return false;
+      return (att.date || '').startsWith(prevYearMonthPrefix);
+    });
+
     return activeTutorsList.map((tutor) => {
-      // Find all attended sessions by this tutor in this month using intelligent name resolution
+      // 1. Calculate previous month salary to check for overpayment (Lebih Bayar)
+      const prevTutorSessions = prevMonthlyAttendances.filter((att) => {
+        const rawTutor = (att.tutorName || '').trim();
+        if (!rawTutor) return false;
+        const resolved = resolveTutorName(rawTutor, allAccounts);
+        const tutorNameLower = tutor.name.trim().toLowerCase();
+        const rawLower = rawTutor.toLowerCase();
+        const resolvedLower = resolved.toLowerCase();
+
+        if (resolvedLower === tutorNameLower) return true;
+        if (rawLower === tutorNameLower) return true;
+        if (tutor.username && rawLower === tutor.username.toLowerCase()) return true;
+        if (tutorNameLower.startsWith(rawLower) || rawLower.startsWith(tutorNameLower)) return true;
+        if (tutorNameLower.includes(rawLower) || rawLower.includes(tutorNameLower)) return true;
+        return false;
+      });
+
+      let prevPrivatGross = 0;
+      let prevGroupGross = 0;
+      let prevEvalBonus = 0;
+      const prevUniqueDaysSet = new Set<string>();
+
+      prevTutorSessions.forEach((session) => {
+        if (session.date) prevUniqueDaysSet.add(session.date);
+        const student = students.find(
+          (s) =>
+            s.id === session.studentId ||
+            s.code.toLowerCase() === session.studentCode.toLowerCase() ||
+            s.name.toLowerCase() === session.studentName.toLowerCase()
+        );
+        const classType: ClassType = session.classType || student?.classType || 'Privat';
+        const studentPrice = student?.pricePerSession || (classType === 'Privat' ? 100000 : 50000);
+
+        if (calcMode === 'percentage') {
+          if (classType === 'Privat') {
+            const pctHonor = Math.round((studentPrice * privatPct) / 100);
+            prevPrivatGross += Math.max(pctHonor, minPrivatRate);
+          } else {
+            const pctHonor = Math.round((studentPrice * groupPct) / 100);
+            prevGroupGross += Math.max(pctHonor, minGroupRate);
+          }
+        } else {
+          if (classType === 'Privat') {
+            prevPrivatGross += flatPrivatRate;
+          } else {
+            prevGroupGross += flatGroupRate;
+          }
+        }
+
+        if (evalBonusPerSession > 0 && session.topic && session.topic.trim().length > 3) {
+          prevEvalBonus += evalBonusPerSession;
+        }
+      });
+
+      const prevTransport = prevUniqueDaysSet.size * transportPerDay;
+      const prevGrossSalary = prevPrivatGross + prevGroupGross + prevTransport + prevEvalBonus;
+
+      // Find payments made for the previous month
+      const prevExpenses = expenses.filter((exp) => {
+        const isSalaryCategory = isSystemExpenseCategory(exp.category, settings);
+        if (!isSalaryCategory) return false;
+
+        const textToSearch = `${exp.paidTo || ''} ${exp.recipient || ''} ${exp.title || ''} ${exp.description || ''} ${exp.notes || ''}`.toLowerCase();
+        const matchesTutor =
+          (exp.tutorId && exp.tutorId === tutor.id) ||
+          (exp.tutorName && exp.tutorName.toLowerCase() === tutor.name.toLowerCase()) ||
+          textToSearch.includes(tutor.name.toLowerCase()) ||
+          (tutor.username && textToSearch.includes(tutor.username.toLowerCase()));
+        if (!matchesTutor) return false;
+
+        const pMonthName = getMonthNameIndo(prevMonth).toLowerCase();
+        const pMonthNumPadded = String(prevMonth).padStart(2, '0');
+        const pYearStr = String(prevYear);
+
+        if (exp.periodMonth && exp.periodYear) {
+          return exp.periodMonth === prevMonth && exp.periodYear === prevYear;
+        }
+
+        const matchesPeriod =
+          textToSearch.includes(pMonthName) ||
+          (exp.date && exp.date.startsWith(`${pYearStr}-${pMonthNumPadded}`)) ||
+          (textToSearch.includes(pYearStr) && (textToSearch.includes(pMonthName) || textToSearch.includes(`bulan ${prevMonth}`)));
+
+        return matchesPeriod;
+      });
+
+      const prevPaidAmount = prevExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+      const previousOverpaymentDeduction = prevPaidAmount > prevGrossSalary ? prevPaidAmount - prevGrossSalary : 0;
+
+      // 2. Find all attended sessions by this tutor in this current month
       const tutorSessions = monthlyAttendances.filter((att) => {
         const rawTutor = (att.tutorName || '').trim();
         if (!rawTutor) return false;
@@ -389,8 +491,8 @@ export const SalaryView: React.FC<SalaryViewProps> = ({
       const transportAllowance = uniqueDays * transportPerDay;
       const baseGrossHonor = privatGross + groupGross;
       const bonus = totalEvalBonus;
-      const deductions = 0;
-      const netTotalSalary = baseGrossHonor + transportAllowance + bonus - deductions;
+      const deductions = previousOverpaymentDeduction;
+      const netTotalSalary = Math.max(0, baseGrossHonor + transportAllowance + bonus - deductions);
 
       // Find all matching expense records created for this tutor salary in this month/period
       const matchingExpenses = expenses.filter((exp) => {
@@ -425,10 +527,13 @@ export const SalaryView: React.FC<SalaryViewProps> = ({
 
       const paidAmount = matchingExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
       const remainingAmount = Math.max(0, netTotalSalary - paidAmount);
+      const currentOverpayment = paidAmount > netTotalSalary ? paidAmount - netTotalSalary : 0;
 
-      let status: 'Draft' | 'Menunggu Pembayaran' | 'Dibayar Sebagian' | 'Lunas' = 'Draft';
+      let status: 'Draft' | 'Menunggu Pembayaran' | 'Dibayar Sebagian' | 'Lunas' | 'Lebih Bayar' = 'Draft';
       if (tutorSessions.length > 0 || paidAmount > 0) {
-        if (paidAmount >= netTotalSalary && netTotalSalary > 0) {
+        if (paidAmount > netTotalSalary && paidAmount > 0) {
+          status = 'Lebih Bayar';
+        } else if (paidAmount === netTotalSalary && netTotalSalary > 0) {
           status = 'Lunas';
         } else if (paidAmount > 0) {
           status = 'Dibayar Sebagian';
@@ -455,6 +560,8 @@ export const SalaryView: React.FC<SalaryViewProps> = ({
         transportAllowance,
         bonus,
         deductions,
+        previousOverpaymentDeduction,
+        currentOverpayment,
         netTotalSalary,
         paidAmount,
         remainingAmount,
@@ -470,6 +577,7 @@ export const SalaryView: React.FC<SalaryViewProps> = ({
   }, [
     activeTutorsList,
     monthlyAttendances,
+    attendances,
     students,
     calcMode,
     privatPct,
@@ -483,7 +591,7 @@ export const SalaryView: React.FC<SalaryViewProps> = ({
     expenses,
     selectedMonth,
     selectedYear,
-    settings.ownerName,
+    settings,
   ]);
 
   // Filtered by search
@@ -872,6 +980,11 @@ export const SalaryView: React.FC<SalaryViewProps> = ({
                         <span className="text-sm font-black text-indigo-950 block">
                           {formatRupiah(record.netTotalSalary)}
                         </span>
+                        {record.previousOverpaymentDeduction && record.previousOverpaymentDeduction > 0 ? (
+                          <span className="text-[10px] text-rose-600 font-medium block">
+                            (Potong Lebih Bayar: -{formatRupiah(record.previousOverpaymentDeduction)})
+                          </span>
+                        ) : null}
                       </td>
 
                       <td className="py-3.5 px-3 text-right font-bold text-emerald-700 font-mono">
@@ -879,13 +992,25 @@ export const SalaryView: React.FC<SalaryViewProps> = ({
                       </td>
 
                       <td className="py-3.5 px-3 text-right font-bold font-mono">
-                        <span className={remaining > 0 ? 'text-amber-700' : 'text-slate-400'}>
-                          {formatRupiah(remaining)}
-                        </span>
+                        {record.currentOverpayment && record.currentOverpayment > 0 ? (
+                          <span className="text-blue-700 font-bold block">
+                            +{formatRupiah(record.currentOverpayment)}
+                            <span className="text-[9px] block text-blue-600 font-normal">Kelebihan</span>
+                          </span>
+                        ) : (
+                          <span className={remaining > 0 ? 'text-amber-700' : 'text-slate-400'}>
+                            {formatRupiah(remaining)}
+                          </span>
+                        )}
                       </td>
 
                       <td className="py-3.5 px-3 text-center">
-                        {record.status === 'Lunas' ? (
+                        {record.status === 'Lebih Bayar' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800 border border-blue-200">
+                            <CheckCircle2 className="w-3 h-3 text-blue-600" />
+                            LEBIH BAYAR
+                          </span>
+                        ) : record.status === 'Lunas' ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                             LUNAS
@@ -929,7 +1054,15 @@ export const SalaryView: React.FC<SalaryViewProps> = ({
 
                           {/* Pay / Settle Button (Owner Only) */}
                           {isOwner && (
-                            record.status === 'Lunas' ? (
+                            record.status === 'Lebih Bayar' ? (
+                              <button
+                                onClick={() => handleOpenPayModal(record)}
+                                title="Lihat rincian kelebihan bayar"
+                                className="px-2 py-1 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-lg text-[10px] font-bold transition cursor-pointer flex items-center gap-1"
+                              >
+                                <span>✓ Lebih Bayar</span>
+                              </button>
+                            ) : record.status === 'Lunas' ? (
                               <button
                                 onClick={() => handleOpenPayModal(record)}
                                 title="Lihat riwayat pencairan atau tambah penyesuaian"
@@ -1251,7 +1384,11 @@ export const SalaryView: React.FC<SalaryViewProps> = ({
                     {getMonthNameIndo(selectedMonth)} {selectedYear}
                   </span>
                   <span className="inline-flex items-center gap-1 font-bold text-[11px] mt-0.5">
-                    {activeSlipModalTutor.status === 'Lunas' ? (
+                    {activeSlipModalTutor.status === 'Lebih Bayar' ? (
+                      <span className="text-blue-800 bg-blue-100 px-2 py-0.5 rounded font-extrabold">
+                        Status: LEBIH BAYAR (+{formatRupiah(activeSlipModalTutor.currentOverpayment || 0)})
+                      </span>
+                    ) : activeSlipModalTutor.status === 'Lunas' ? (
                       <span className="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-extrabold">
                         Status: LUNAS (TERBAYAR PENUH)
                       </span>
@@ -1334,11 +1471,23 @@ export const SalaryView: React.FC<SalaryViewProps> = ({
                         </td>
                       </tr>
                     )}
+                    {activeSlipModalTutor.previousOverpaymentDeduction && activeSlipModalTutor.previousOverpaymentDeduction > 0 ? (
+                      <tr>
+                        <td className="py-2.5 px-3 font-semibold text-rose-700">
+                          Pemotongan Lebih Bayar Bulan Sebelumnya
+                        </td>
+                        <td className="py-2.5 px-3 text-center">-</td>
+                        <td className="py-2.5 px-3 text-right text-slate-500 font-mono">-</td>
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-rose-700">
+                          -{formatRupiah(activeSlipModalTutor.previousOverpaymentDeduction)}
+                        </td>
+                      </tr>
+                    ) : null}
                   </tbody>
                   <tfoot className="bg-slate-50 font-black text-slate-950 border-t-2 border-slate-300">
                     <tr>
                       <td colSpan={3} className="py-3 px-3 text-right uppercase text-xs">
-                        TOTAL HAK HONORARIUM (BRUTO):
+                        TOTAL HAK HONORARIUM (BERSIH):
                       </td>
                       <td className="py-3 px-3 text-right font-mono text-sm text-indigo-950">
                         {formatRupiah(activeSlipModalTutor.netTotalSalary)}
@@ -1390,44 +1539,57 @@ export const SalaryView: React.FC<SalaryViewProps> = ({
                             {formatRupiah(activeSlipModalTutor.paidAmount || 0)}
                           </td>
                         </tr>
-                        <tr>
-                          <td colSpan={3} className="py-2 px-3 text-right uppercase text-[11px] text-slate-600">
-                            Sisa Kurang Bayar (Belum Dicairkan):
-                          </td>
-                          <td className="py-2 px-3 text-right font-mono font-extrabold text-amber-700">
-                            {formatRupiah(activeSlipModalTutor.remainingAmount || 0)}
-                          </td>
-                        </tr>
+                        {activeSlipModalTutor.currentOverpayment && activeSlipModalTutor.currentOverpayment > 0 ? (
+                          <tr>
+                            <td colSpan={3} className="py-2 px-3 text-right uppercase text-[11px] text-blue-700">
+                              Kelebihan Pembayaran (Lebih Bayar):
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono font-extrabold text-blue-700">
+                              +{formatRupiah(activeSlipModalTutor.currentOverpayment)}
+                            </td>
+                          </tr>
+                        ) : (
+                          <tr>
+                            <td colSpan={3} className="py-2 px-3 text-right uppercase text-[11px] text-slate-600">
+                              Sisa Kurang Bayar (Belum Dicairkan):
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono font-extrabold text-amber-700">
+                              {formatRupiah(activeSlipModalTutor.remainingAmount || 0)}
+                            </td>
+                          </tr>
+                        )}
                       </tfoot>
                     </table>
                   </div>
                 </div>
               )}
 
+              {/* Tanggal & Tempat Slip */}
+              <div className="flex justify-end text-xs text-slate-600 font-medium pt-2 mb-2">
+                <p>{settings.city || 'Blora'}, {formatDateIndo(getTodayDateString())}</p>
+              </div>
+
               {/* Signatures Area */}
-              <div className="grid grid-cols-2 gap-8 pt-4 text-xs text-center">
+              <div className="grid grid-cols-2 gap-8 text-xs text-center">
                 <div>
-                  <p className="text-slate-500 text-[11px] mb-12">Penerima Honor,</p>
-                  <p className="font-bold text-slate-900 underline">{activeSlipModalTutor.tutorName}</p>
-                  <p className="text-[10px] text-slate-400">Tutor Pengajar</p>
+                  <p className="text-slate-600 font-semibold mb-14">Penerima Honor,</p>
+                  <p className="font-bold text-slate-900 border-t border-slate-300 pt-1 inline-block min-w-[170px]">
+                    ( {activeSlipModalTutor.tutorName} )
+                  </p>
                 </div>
                 <div>
-                  <p className="text-slate-500 text-[11px] mb-12">
-                    {settings.city || (settings.address?.toLowerCase().includes('blora') ? 'Blora' : 'Blora')}, {formatDateIndo(getTodayDateString())} <br />
-                    Bendahara / Pimpinan Bimbel,
+                  <p className="text-slate-600 font-semibold mb-14">
+                    {settings.financeOfficerTitle || settings.ownerTitle || 'Finance'},
                   </p>
-                  <p className="font-bold text-slate-900 underline">
-                    {settings.ownerName || 'Pimpinan Bimbel'}
-                  </p>
-                  <p className="text-[10px] text-slate-400">
-                    {settings.ownerTitle || 'Direktur Lembaga'}
+                  <p className="font-bold text-slate-900 border-t border-slate-300 pt-1 inline-block min-w-[170px]">
+                    ( {settings.financeOfficerName || settings.ownerName || 'Nama Bendahara'} )
                   </p>
                 </div>
               </div>
 
               <div className="pt-2 border-t border-slate-200 text-center">
                 <p className="text-[10px] text-slate-400 italic">
-                  * Dokumen ini merupakan bukti sah pembayaran honorarium pengajar pada {settings.bimbelName || 'Bimbel Sigma'}.
+                  * Dokumen ini merupakan bukti sah pembayaran honorarium pengajar pada {settings.bimbelName || 'Rumah Belajar'}.
                 </p>
               </div>
             </div>

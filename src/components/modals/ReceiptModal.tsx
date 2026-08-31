@@ -254,21 +254,23 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           {/* Signatures */}
           <div className="grid grid-cols-2 gap-8 pt-4 text-xs">
             <div className="text-center">
-              <p className="text-slate-500 mb-12">Orang Tua / Siswa,</p>
-              <div className="border-t border-slate-400 pt-1 font-bold text-slate-800">
-                ( ........................................ )
+              <p className="text-slate-600 font-semibold mb-14">Orang Tua / Wali Siswa,</p>
+              <div className="border-t border-slate-400 pt-1 font-bold text-slate-900 inline-block min-w-[170px]">
+                ( {student?.parentName || (student ? `Wali dari ${student.name}` : (income.studentName ? `Wali dari ${income.studentName}` : '........................................'))} )
               </div>
             </div>
             <div className="text-center">
-              <p className="text-slate-500 mb-12">Penerima (Kasir / Admin),</p>
-              <div className="border-t border-slate-400 pt-1 font-bold text-slate-800">
-                {income.receivedBy || 'Petugas Kasir'}
+              <p className="text-slate-600 font-semibold mb-14">
+                {settings?.financeOfficerTitle || 'Petugas Keuangan / Kasir'},
+              </p>
+              <div className="border-t border-slate-400 pt-1 font-bold text-slate-900 inline-block min-w-[170px]">
+                ( {income.receivedBy || settings?.financeOfficerName || ownerName || 'Petugas Kasir'} )
               </div>
             </div>
           </div>
 
           <div className="text-center text-[10px] text-slate-400 border-t border-slate-100 pt-3">
-            *Kwitansi ini adalah bukti pembayaran yang sah diterbitkan oleh Sistem Manajemen Operasional Bimbel Sigma.
+            *Kwitansi ini adalah bukti pembayaran yang sah diterbitkan oleh Sistem Manajemen Operasional {bimbelName}.
           </div>
         </div>
       </div>

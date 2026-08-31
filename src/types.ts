@@ -238,10 +238,12 @@ export interface TutorSalaryRecord {
   transportAllowance: number;
   bonus: number;
   deductions: number;
+  previousOverpaymentDeduction?: number;
+  currentOverpayment?: number;
   netTotalSalary: number;
   paidAmount?: number;
   remainingAmount?: number;
-  status: 'Draft' | 'Menunggu Pembayaran' | 'Dibayar Sebagian' | 'Lunas';
+  status: 'Draft' | 'Menunggu Pembayaran' | 'Dibayar Sebagian' | 'Lunas' | 'Lebih Bayar';
   paidAt?: string;
   paidBy?: string;
   paymentMethod?: string;

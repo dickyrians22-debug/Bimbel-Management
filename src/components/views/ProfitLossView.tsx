@@ -1232,25 +1232,26 @@ export const ProfitLossView: React.FC<ProfitLossViewProps> = ({
               } gap-6 text-xs text-center`}
             >
               <div>
-                <p className="text-slate-500 mb-12">Disiapkan Oleh ({financeTitle}):</p>
+                <p className="text-slate-600 font-semibold mb-14">Disiapkan Oleh ({financeTitle}):</p>
                 <p className="font-bold text-slate-900 border-t border-slate-300 pt-1">
-                  {financeName}
+                  ( {financeName} )
                 </p>
-                <p className="text-[10px] text-slate-500">{financeTitle}</p>
               </div>
 
               {opsName && (
                 <div>
-                  <p className="text-slate-500 mb-12">Mengetahui ({opsTitle}):</p>
-                  <p className="font-bold text-slate-900 border-t border-slate-300 pt-1">{opsName}</p>
-                  <p className="text-[10px] text-slate-500">{opsTitle}</p>
+                  <p className="text-slate-600 font-semibold mb-14">Mengetahui ({opsTitle}):</p>
+                  <p className="font-bold text-slate-900 border-t border-slate-300 pt-1">
+                    ( {opsName} )
+                  </p>
                 </div>
               )}
 
               <div>
-                <p className="text-slate-500 mb-12">Disetujui Oleh ({ownerTitle}):</p>
-                <p className="font-bold text-slate-900 border-t border-slate-300 pt-1">{ownerName}</p>
-                <p className="text-[10px] text-slate-500">{ownerTitle}</p>
+                <p className="text-slate-600 font-semibold mb-14">Disetujui Oleh ({ownerTitle}):</p>
+                <p className="font-bold text-slate-900 border-t border-slate-300 pt-1">
+                  ( {ownerName} )
+                </p>
               </div>
             </div>
           </div>
@@ -1480,25 +1481,26 @@ export const ProfitLossView: React.FC<ProfitLossViewProps> = ({
               } gap-6 text-xs text-center`}
             >
               <div>
-                <p className="text-slate-500 mb-12">Disiapkan Oleh ({financeTitle}):</p>
+                <p className="text-slate-600 font-semibold mb-14">Disiapkan Oleh ({financeTitle}):</p>
                 <p className="font-bold text-slate-900 border-t border-slate-300 pt-1">
-                  {financeName}
+                  ( {financeName} )
                 </p>
-                <p className="text-[10px] text-slate-500">{financeTitle}</p>
               </div>
 
               {opsName && (
                 <div>
-                  <p className="text-slate-500 mb-12">Mengetahui ({opsTitle}):</p>
-                  <p className="font-bold text-slate-900 border-t border-slate-300 pt-1">{opsName}</p>
-                  <p className="text-[10px] text-slate-500">{opsTitle}</p>
+                  <p className="text-slate-600 font-semibold mb-14">Mengetahui ({opsTitle}):</p>
+                  <p className="font-bold text-slate-900 border-t border-slate-300 pt-1">
+                    ( {opsName} )
+                  </p>
                 </div>
               )}
 
               <div>
-                <p className="text-slate-500 mb-12">Disetujui Oleh ({ownerTitle}):</p>
-                <p className="font-bold text-slate-900 border-t border-slate-300 pt-1">{ownerName}</p>
-                <p className="text-[10px] text-slate-500">{ownerTitle}</p>
+                <p className="text-slate-600 font-semibold mb-14">Disetujui Oleh ({ownerTitle}):</p>
+                <p className="font-bold text-slate-900 border-t border-slate-300 pt-1">
+                  ( {ownerName} )
+                </p>
               </div>
             </div>
           </div>

@@ -667,7 +667,7 @@ export default function App() {
         status: 'Hadir',
         topic: topic || 'Belajar Mandiri & Pendalaman Materi',
         tutorNotes: notes ? `[Absen Mandiri Siswa]: ${notes}` : 'Hadir mandiri melalui portal siswa',
-        tutorName: tutorName || student.tutorName || 'Tutor Bimbel Sigma',
+        tutorName: tutorName || student.tutorName || settings.ownerName || 'Nanik Susilowati, M.Pd',
         createdAt: new Date().toISOString(),
       };
       const updated = [newRecord, ...attendance];
