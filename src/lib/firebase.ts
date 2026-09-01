@@ -51,6 +51,7 @@ export const COLLECTIONS = {
   EXPENSES: 'expenses',
   USERS: 'users',
   SETTINGS: 'settings',
+  PROSPECTIVE_STUDENTS: 'prospective_students',
 } as const;
 
 export type CollectionKey = keyof typeof COLLECTIONS;

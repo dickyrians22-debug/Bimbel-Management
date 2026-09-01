@@ -7,12 +7,14 @@ import {
   UserAccount,
   BimbelSettings,
   MonthlyPLSummary,
+  ProspectiveStudent,
 } from '../types';
 import {
   INITIAL_STUDENTS,
   INITIAL_ATTENDANCE,
   INITIAL_INCOMES,
   INITIAL_EXPENSES,
+  INITIAL_PROSPECTIVE_STUDENTS,
   DEFAULT_USERS,
   DEFAULT_ACCOUNTS,
   DEFAULT_SETTINGS,
@@ -26,6 +28,7 @@ const KEYS = {
   AUTH: 'bimbel_sigma_auth_v3',
   USERS: 'bimbel_sigma_users_v3',
   SETTINGS: 'bimbel_sigma_settings_v2',
+  PROSPECTIVE_STUDENTS: 'bimbel_sigma_prospective_students_v1',
 };
 
 // Role sorting priority: 1. Owner -> 2. Tutor -> 3. Siswa
@@ -216,6 +219,47 @@ export function saveExpenses(expenses: ExpenseRecord[]): void {
   }
 }
 
+export function getInitialProspectiveStudents(): ProspectiveStudent[] {
+  try {
+    const raw = localStorage.getItem(KEYS.PROSPECTIVE_STUDENTS);
+    if (!raw) {
+      localStorage.setItem(KEYS.PROSPECTIVE_STUDENTS, JSON.stringify(INITIAL_PROSPECTIVE_STUDENTS));
+      return INITIAL_PROSPECTIVE_STUDENTS;
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : INITIAL_PROSPECTIVE_STUDENTS;
+  } catch (e) {
+    return INITIAL_PROSPECTIVE_STUDENTS;
+  }
+}
+
+export function saveProspectiveStudents(list: ProspectiveStudent[]): void {
+  try {
+    localStorage.setItem(KEYS.PROSPECTIVE_STUDENTS, JSON.stringify(list));
+  } catch (e) {
+    console.error('Error saving prospective students', e);
+  }
+}
+
+export function generateRegistrationNumber(existingList: ProspectiveStudent[]): string {
+  const currentYear = new Date().getFullYear();
+  const prefix = `REG-${currentYear}-`;
+  let maxSeq = 0;
+
+  existingList.forEach((item) => {
+    const num = item.registrationNumber || '';
+    if (num.startsWith(prefix)) {
+      const seq = parseInt(num.slice(prefix.length), 10);
+      if (!isNaN(seq) && seq > maxSeq) {
+        maxSeq = seq;
+      }
+    }
+  });
+
+  const nextSeq = maxSeq + 1;
+  return `${prefix}${String(nextSeq).padStart(3, '0')}`;
+}
+
 export function resetToMockData(): {
   students: Student[];
   attendance: AttendanceRecord[];
@@ -223,6 +267,7 @@ export function resetToMockData(): {
   expenses: ExpenseRecord[];
   users: UserAccount[];
   settings: BimbelSettings;
+  prospectiveStudents: ProspectiveStudent[];
 } {
   const normalizedExpenses = INITIAL_EXPENSES.map((e) => ({
     ...e,
@@ -237,6 +282,7 @@ export function resetToMockData(): {
   localStorage.setItem(KEYS.EXPENSES, JSON.stringify(normalizedExpenses));
   localStorage.setItem(KEYS.USERS, JSON.stringify(sortedUsers));
   localStorage.setItem(KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
+  localStorage.setItem(KEYS.PROSPECTIVE_STUDENTS, JSON.stringify(INITIAL_PROSPECTIVE_STUDENTS));
 
   return {
     students: INITIAL_STUDENTS,
@@ -245,6 +291,7 @@ export function resetToMockData(): {
     expenses: normalizedExpenses,
     users: sortedUsers,
     settings: DEFAULT_SETTINGS,
+    prospectiveStudents: INITIAL_PROSPECTIVE_STUDENTS,
   };
 }
 

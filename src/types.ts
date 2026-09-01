@@ -60,6 +60,11 @@ export interface BimbelSettings {
   sidebarFooterNote?: string;
   accentColor?: string; // 'indigo' | 'blue' | 'emerald' | 'violet' | 'rose' | 'amber'
 
+  // Pengaturan Dokumen & Bukti Pendaftaran PPDB
+  ppdbDocSubtitle?: string; // Subtitle dokumen bukti registrasi
+  ppdbTermsTitle?: string; // Judul bagian ketentuan (default: "KETENTUAN & PETUNJUK PENDAFTARAN:")
+  ppdbTerms?: string[]; // Butir-butir ketentuan / petunjuk pendaftaran yang dapat diatur oleh Owner
+
   // Kustomisasi Teks Dashboard & Banner
   ownerDashboardBadge?: string;
   ownerDashboardTitle?: string;
@@ -277,12 +282,47 @@ export interface StudentBillingItem {
   incomesList: IncomeRecord[];
 }
 
+export type ProspectiveStudentStatus =
+  | 'Baru'
+  | 'Jadwal Trial'
+  | 'Menunggu Bayar'
+  | 'Diterima'
+  | 'Batal';
+
+export interface ProspectiveStudent {
+  id: string;
+  registrationNumber: string; // e.g. "REG-2026-001"
+  studentName: string;
+  nickname?: string;
+  gender?: 'L' | 'P';
+  birthDate?: string;
+  schoolOrigin?: string;
+  level: StudentLevel;
+  gradeDetail: string; // e.g. "Kelas 4 SD"
+  classType: ClassType; // 'Privat' | 'Grup'
+  interestedSubjects: string[]; // e.g. ['Matematika', 'IPA']
+  preferredSchedule?: string;
+  parentName: string;
+  parentPhone: string;
+  parentEmail?: string;
+  address?: string;
+  notes?: string;
+  status: ProspectiveStudentStatus;
+  trialDate?: string;
+  assignedTutorName?: string;
+  convertedStudentId?: string;
+  convertedStudentCode?: string;
+  registrationDate: string; // YYYY-MM-DD
+  createdAt: string;
+}
+
 export type ActiveTab =
   | 'dashboard'
   | 'students'
   | 'attendance'
   | 'student-billing'
   | 'cash-book'
+  | 'ppdb'
   | 'print-cards'
   | 'salary'
   | 'incomes'
@@ -290,3 +330,4 @@ export type ActiveTab =
   | 'profit-loss'
   | 'student-portal'
   | 'settings';
+

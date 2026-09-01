@@ -8,6 +8,7 @@ import {
   UserAccount,
   BimbelSettings,
   ActiveTab,
+  ProspectiveStudent,
 } from './types';
 import {
   getInitialStudents,
@@ -16,12 +17,14 @@ import {
   getInitialExpenses,
   getInitialUsers,
   getInitialSettings,
+  getInitialProspectiveStudents,
   saveStudents,
   saveAttendance,
   saveIncomes,
   saveExpenses,
   saveUsers,
   saveSettings,
+  saveProspectiveStudents,
   resetToMockData,
   sortUsersByRole,
   getTodayDateString,
@@ -50,6 +53,7 @@ import {
   INITIAL_ATTENDANCE,
   INITIAL_INCOMES,
   INITIAL_EXPENSES,
+  INITIAL_PROSPECTIVE_STUDENTS,
 } from './utils/mockData';
 import {
   subscribeToCollection,
@@ -81,6 +85,8 @@ import { ExpenseView } from './components/views/ExpenseView';
 import { ProfitLossView } from './components/views/ProfitLossView';
 import { SalaryView } from './components/views/SalaryView';
 import { SettingsView } from './components/views/SettingsView';
+import { PPDBManagementView } from './components/views/PPDBManagementView';
+import { PublicPortalView } from './components/portal/PublicPortalView';
 
 // Modal Components
 import { StudentModal } from './components/modals/StudentModal';
@@ -164,12 +170,16 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState<ActiveTab>('dashboard');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isCloudConnected, setIsCloudConnected] = useState(true);
+  const [showPublicPortal, setShowPublicPortal] = useState(false);
 
   // 3. Core Data States (Synced with LocalStorage & Firestore Cloud)
   const [students, setStudents] = useState<Student[]>(() => getInitialStudents());
   const [attendance, setAttendance] = useState<AttendanceRecord[]>(() => getInitialAttendance());
   const [incomes, setIncomes] = useState<IncomeRecord[]>(() => getInitialIncomes());
   const [expenses, setExpenses] = useState<ExpenseRecord[]>(() => getInitialExpenses());
+  const [prospectiveStudents, setProspectiveStudents] = useState<ProspectiveStudent[]>(() =>
+    getInitialProspectiveStudents()
+  );
   const [users, setUsers] = useState<UserAccount[]>(() => {
     const raw = getInitialUsers();
     const { fixed } = sanitizeAndFixUserAccounts(raw);
@@ -248,9 +258,17 @@ export default function App() {
           console.log('Seeding essential accounts and students to Firestore...');
           await batchSeedToFirestore(COLLECTIONS.USERS, DEFAULT_ACCOUNTS);
           await batchSeedToFirestore(COLLECTIONS.STUDENTS, INITIAL_STUDENTS);
+          await batchSeedToFirestore(COLLECTIONS.PROSPECTIVE_STUDENTS, INITIAL_PROSPECTIVE_STUDENTS);
           await syncDocToFirestore(COLLECTIONS.SETTINGS, 'default', { id: 'default', ...DEFAULT_SETTINGS });
           console.log('Firestore essential seed completed.');
         } else {
+          // Check prospective students collection
+          const prospectiveCount = await checkCollectionCount(COLLECTIONS.PROSPECTIVE_STUDENTS);
+          if (prospectiveCount === 0) {
+            console.log('Seeding initial prospective students to Firestore...');
+            await batchSeedToFirestore(COLLECTIONS.PROSPECTIVE_STUDENTS, INITIAL_PROSPECTIVE_STUDENTS);
+          }
+
           // If Firestore contains fewer than 25 students or old mock data, update with student list and user accounts
           const studentCount = await checkCollectionCount(COLLECTIONS.STUDENTS);
           if (studentCount < 25) {
@@ -385,6 +403,18 @@ export default function App() {
       () => setIsCloudConnected(false)
     );
     unsubs.push(unsubSettings);
+
+    // 7. Subscribe to Prospective Students (PPDB)
+    const unsubProspective = subscribeToCollection<ProspectiveStudent>(
+      COLLECTIONS.PROSPECTIVE_STUDENTS,
+      (cloudData) => {
+        setProspectiveStudents(cloudData);
+        saveProspectiveStudents(cloudData);
+        setIsCloudConnected(true);
+      },
+      () => setIsCloudConnected(false)
+    );
+    unsubs.push(unsubProspective);
 
     return () => {
       unsubs.forEach((unsub) => {
@@ -582,6 +612,112 @@ export default function App() {
         }
         setDeleteDialog((prev) => ({ ...prev, isOpen: false }));
         showToast('Database 25 siswa berhasil diperbarui & disinkronkan!');
+      },
+    });
+  };
+
+  // --- Handlers: Prospective Students (PPDB) ---
+  const handleSaveProspectiveStudent = (data: ProspectiveStudent) => {
+    const isEdit = prospectiveStudents.some((p) => p.id === data.id);
+    if (isEdit) {
+      const updated = prospectiveStudents.map((p) => (p.id === data.id ? data : p));
+      setProspectiveStudents(updated);
+      saveProspectiveStudents(updated);
+      syncDocToFirestore(COLLECTIONS.PROSPECTIVE_STUDENTS, data.id, data).catch(console.error);
+      showToast(`Data calon siswa "${data.studentName}" berhasil diperbarui.`);
+    } else {
+      const newProspective: ProspectiveStudent = {
+        ...data,
+        id: data.id || `prosp-${Date.now()}`,
+        registrationDate: data.registrationDate || getTodayDateString(),
+        createdAt: data.createdAt || new Date().toISOString(),
+      };
+      const updated = [newProspective, ...prospectiveStudents];
+      setProspectiveStudents(updated);
+      saveProspectiveStudents(updated);
+      syncDocToFirestore(COLLECTIONS.PROSPECTIVE_STUDENTS, newProspective.id, newProspective).catch(console.error);
+      showToast(`Calon siswa "${data.studentName}" (${data.registrationNumber}) berhasil didaftarkan!`);
+    }
+  };
+
+  const handleDeleteProspectiveStudent = (prospectiveOrId: ProspectiveStudent | string, customName?: string) => {
+    const id = typeof prospectiveOrId === 'string' ? prospectiveOrId : prospectiveOrId.id;
+    const target = typeof prospectiveOrId === 'object' ? prospectiveOrId : prospectiveStudents.find((p) => p.id === id);
+    const itemName = customName || (target ? `${target.studentName} (${target.registrationNumber})` : 'Data Calon Siswa');
+
+    setDeleteDialog({
+      isOpen: true,
+      title: 'Hapus Data Calon Siswa (PPDB)',
+      message: 'Apakah Anda yakin ingin menghapus data calon siswa ini dari daftar pendaftaran PPDB?',
+      itemName,
+      onConfirm: () => {
+        const updated = prospectiveStudents.filter((p) => p.id !== id);
+        setProspectiveStudents(updated);
+        saveProspectiveStudents(updated);
+        deleteDocFromFirestore(COLLECTIONS.PROSPECTIVE_STUDENTS, id).catch(console.error);
+        setDeleteDialog((prev) => ({ ...prev, isOpen: false }));
+        showToast(`Data pendaftar "${itemName}" telah dihapus.`);
+      },
+    });
+  };
+
+  const handleConvertToStudent = (newStudent: Student, updatedProspective: ProspectiveStudent) => {
+    // 1. Save new student to students state & cloud
+    const studentExists = students.some((s) => s.id === newStudent.id);
+    const updatedStudentsList = studentExists
+      ? students.map((s) => (s.id === newStudent.id ? newStudent : s))
+      : [newStudent, ...students];
+    setStudents(updatedStudentsList);
+    saveStudents(updatedStudentsList);
+    syncDocToFirestore(COLLECTIONS.STUDENTS, newStudent.id, newStudent).catch(console.error);
+
+    // 2. Auto-create student portal account if doesn't exist yet
+    const existingAcc = users.find(
+      (u) => u.linkedStudentId === newStudent.id || u.username.toLowerCase() === newStudent.code.toLowerCase()
+    );
+    if (!existingAcc) {
+      const newStudentAccount: UserAccount = {
+        id: `usr-${newStudent.id}`,
+        username: newStudent.code.toLowerCase(),
+        password: '123',
+        name: newStudent.name,
+        role: 'siswa',
+        code: newStudent.code,
+        linkedStudentId: newStudent.id,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      };
+      const updatedUsersList = sortUsersByRole([newStudentAccount, ...users]);
+      setUsers(updatedUsersList);
+      saveUsers(updatedUsersList);
+      syncDocToFirestore(COLLECTIONS.USERS, newStudentAccount.id, newStudentAccount).catch(console.error);
+    }
+
+    // 3. Update prospective student record with status 'Diterima' and linked student ID
+    const updatedProspList = prospectiveStudents.map((p) => (p.id === updatedProspective.id ? updatedProspective : p));
+    setProspectiveStudents(updatedProspList);
+    saveProspectiveStudents(updatedProspList);
+    syncDocToFirestore(COLLECTIONS.PROSPECTIVE_STUDENTS, updatedProspective.id, updatedProspective).catch(console.error);
+
+    showToast(`🎉 ${newStudent.name} (${newStudent.code}) resmi diterima menjadi Siswa Bimbel Sigma! Akun login: @${newStudent.code.toLowerCase()} (Pass: 123)`);
+  };
+
+  const handleResetProspectiveMockData = () => {
+    setDeleteDialog({
+      isOpen: true,
+      title: 'Reset Data Pendaftar PPDB ke Contoh Awal',
+      message: 'Apakah Anda ingin me-reset daftar calon siswa ke data contoh awal?',
+      itemName: 'Mock Data PPDB',
+      onConfirm: async () => {
+        setProspectiveStudents(INITIAL_PROSPECTIVE_STUDENTS);
+        saveProspectiveStudents(INITIAL_PROSPECTIVE_STUDENTS);
+        try {
+          await replaceAllInCollection(COLLECTIONS.PROSPECTIVE_STUDENTS, INITIAL_PROSPECTIVE_STUDENTS);
+        } catch (e) {
+          console.error(e);
+        }
+        setDeleteDialog((prev) => ({ ...prev, isOpen: false }));
+        showToast('Data PPDB berhasil di-reset ke data contoh awal!');
       },
     });
   };
@@ -1234,6 +1370,25 @@ export default function App() {
       joinDate: today,
     };
 
+  // If showPublicPortal is active, render PublicPortalView
+  if (showPublicPortal) {
+    return (
+      <PublicPortalView
+        settings={settings}
+        students={students}
+        attendance={attendance}
+        incomes={incomes}
+        prospectiveStudents={prospectiveStudents}
+        users={users}
+        onRegisterProspectiveStudent={handleSaveProspectiveStudent}
+        onOpenLogin={() => {
+          setShowPublicPortal(false);
+          setCurrentUser(null);
+        }}
+      />
+    );
+  }
+
   // If user is not logged in, show AuthLoginView
   if (!currentUser) {
     return (
@@ -1242,6 +1397,7 @@ export default function App() {
         users={users}
         students={students}
         settings={settings}
+        onOpenPublicPortal={() => setShowPublicPortal(true)}
       />
     );
   }
@@ -1269,6 +1425,7 @@ export default function App() {
         todayAttendanceCount={todayAttendanceCount}
         totalStudentsCount={students.length}
         onOpenChangePasswordModal={() => handleOpenChangePasswordModal(currentUser)}
+        onOpenPublicPortal={() => setShowPublicPortal(true)}
         isCloudConnected={isCloudConnected}
       />
 
@@ -1284,6 +1441,9 @@ export default function App() {
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
           todayAttendanceCount={todayAttendanceCount}
           totalStudentsCount={students.length}
+          prospectiveStudentsCount={
+            prospectiveStudents.filter((p) => p.status === 'Baru' || p.status === 'Jadwal Trial').length
+          }
         />
 
         {/* Main View Area */}
@@ -1345,6 +1505,21 @@ export default function App() {
               onOpenStudentModal={handleOpenStudentModal}
               onDeleteStudent={handleDeleteStudent}
               onResetStudents={handleResetToScreenshotStudents}
+            />
+          )}
+
+          {/* TAB: PPDB & CALON SISWA (Owner & Tutor) */}
+          {currentTab === 'ppdb' && (currentUser.role === 'owner' || currentUser.role === 'tutor') && (
+            <PPDBManagementView
+              prospectiveStudents={prospectiveStudents}
+              students={students}
+              users={users}
+              userRole={currentUser.role}
+              settings={settings}
+              onSaveProspective={handleSaveProspectiveStudent}
+              onDeleteProspective={(id) => handleDeleteProspectiveStudent(id)}
+              onConvertToStudent={handleConvertToStudent}
+              onOpenPublicPortal={() => setShowPublicPortal(true)}
             />
           )}
 

@@ -48,6 +48,7 @@ import {
   Share2,
   RefreshCw,
   Lock,
+  FileText,
 } from 'lucide-react';
 import {
   UserAccount,
@@ -104,7 +105,7 @@ interface SettingsViewProps {
   onSyncAllToCloud?: () => Promise<void>;
 }
 
-type SettingsSubTab = 'accounts' | 'salary-rates' | 'financial-categories' | 'profile' | 'whatsapp-templates' | 'appearance' | 'backup';
+type SettingsSubTab = 'accounts' | 'salary-rates' | 'financial-categories' | 'profile' | 'ppdb-terms' | 'whatsapp-templates' | 'appearance' | 'backup';
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   users,
@@ -208,6 +209,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [testPhoneNumber, setTestPhoneNumber] = useState(settings.phone || '081234567890');
   const [copiedTemplate, setCopiedTemplate] = useState(false);
 
+  // PPDB Terms & Document Settings state
+  const [ppdbForm, setPpdbForm] = useState<{
+    ppdbDocSubtitle: string;
+    ppdbTermsTitle: string;
+    ppdbTerms: string[];
+  }>({
+    ppdbDocSubtitle:
+      settings.ppdbDocSubtitle ||
+      'Penerimaan Peserta Didik Baru & Registrasi Program Bimbingan Belajar',
+    ppdbTermsTitle: settings.ppdbTermsTitle || 'KETENTUAN & PETUNJUK PENDAFTARAN:',
+    ppdbTerms:
+      settings.ppdbTerms && settings.ppdbTerms.length > 0
+        ? settings.ppdbTerms
+        : [
+            'Lembar ini merupakan bukti sah pendaftaran calon peserta didik baru di Bimbel.',
+            'Admin Bimbel akan segera menghubungi orang tua / wali murid melalui WhatsApp untuk konfirmasi pemilihan jadwal dan mata pelajaran.',
+            'Penyelesaian administrasi pendaftaran & SPP dilakukan sebelum sesi pembelajaran pertama dimulai.',
+            'Siswa yang telah terdaftar resmi akan mendapatkan akses mandiri ke Portal Siswa untuk memantau absensi dan materi belajar.',
+          ],
+  });
+  const [ppdbSavedToast, setPpdbSavedToast] = useState(false);
+  const [newPpdbTerm, setNewPpdbTerm] = useState('');
+  const [editingTermIndex, setEditingTermIndex] = useState<number | null>(null);
+  const [editingTermText, setEditingTermText] = useState('');
+
   // In-App Confirmation & Notice Dialog states (Iframe-Safe)
   const [isResetFactoryModalOpen, setIsResetFactoryModalOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -282,7 +308,107 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       paidBilling: settings.whatsappTemplates?.paidBilling || DEFAULT_WA_TEMPLATES.paidBilling,
       studentReport: settings.whatsappTemplates?.studentReport || DEFAULT_WA_TEMPLATES.studentReport,
     });
+    setPpdbForm({
+      ppdbDocSubtitle:
+        settings.ppdbDocSubtitle ||
+        'Penerimaan Peserta Didik Baru & Registrasi Program Bimbingan Belajar',
+      ppdbTermsTitle: settings.ppdbTermsTitle || 'KETENTUAN & PETUNJUK PENDAFTARAN:',
+      ppdbTerms:
+        settings.ppdbTerms && settings.ppdbTerms.length > 0
+          ? settings.ppdbTerms
+          : [
+              'Lembar ini merupakan bukti sah pendaftaran calon peserta didik baru di Bimbel.',
+              'Admin Bimbel akan segera menghubungi orang tua / wali murid melalui WhatsApp untuk konfirmasi pemilihan jadwal dan mata pelajaran.',
+              'Penyelesaian administrasi pendaftaran & SPP dilakukan sebelum sesi pembelajaran pertama dimulai.',
+              'Siswa yang telah terdaftar resmi akan mendapatkan akses mandiri ke Portal Siswa untuk memantau absensi dan materi belajar.',
+            ],
+    });
   }, [settings]);
+
+  // Handle Save PPDB Document Settings
+  const handleSavePpdbSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    const updated: BimbelSettings = {
+      ...settings,
+      ppdbDocSubtitle: ppdbForm.ppdbDocSubtitle.trim(),
+      ppdbTermsTitle: ppdbForm.ppdbTermsTitle.trim(),
+      ppdbTerms: ppdbForm.ppdbTerms,
+    };
+    onSaveSettings(updated);
+    setPpdbSavedToast(true);
+    setTimeout(() => setPpdbSavedToast(false), 3000);
+  };
+
+  const handleResetPpdbDefaults = () => {
+    setDeleteDialog({
+      isOpen: true,
+      title: 'Reset Format Ketentuan PPDB',
+      message:
+        'Kembalikan judul dokumen, subjudul, dan butir-butir ketentuan pendaftaran PPDB ke format standar bawaan sistem?',
+      itemName: 'Pengaturan Format Bukti PPDB',
+      onConfirm: () => {
+        const defaultTerms = [
+          'Lembar ini merupakan bukti sah pendaftaran calon peserta didik baru di Bimbel.',
+          'Admin Bimbel akan segera menghubungi orang tua / wali murid melalui WhatsApp untuk konfirmasi pemilihan jadwal dan mata pelajaran.',
+          'Penyelesaian administrasi pendaftaran & SPP dilakukan sebelum sesi pembelajaran pertama dimulai.',
+          'Siswa yang telah terdaftar resmi akan mendapatkan akses mandiri ke Portal Siswa untuk memantau absensi dan materi belajar.',
+        ];
+        const resetData = {
+          ppdbDocSubtitle: 'Penerimaan Peserta Didik Baru & Registrasi Program Bimbingan Belajar',
+          ppdbTermsTitle: 'KETENTUAN & PETUNJUK PENDAFTARAN:',
+          ppdbTerms: defaultTerms,
+        };
+        setPpdbForm(resetData);
+        const updated: BimbelSettings = {
+          ...settings,
+          ...resetData,
+        };
+        onSaveSettings(updated);
+        setPpdbSavedToast(true);
+        setTimeout(() => setPpdbSavedToast(false), 3000);
+      },
+    });
+  };
+
+  const handleAddPpdbTerm = (e: React.FormEvent) => {
+    e.preventDefault();
+    const term = newPpdbTerm.trim();
+    if (!term) return;
+    setPpdbForm((prev) => ({
+      ...prev,
+      ppdbTerms: [...prev.ppdbTerms, term],
+    }));
+    setNewPpdbTerm('');
+  };
+
+  const handleDeletePpdbTerm = (index: number) => {
+    setPpdbForm((prev) => ({
+      ...prev,
+      ppdbTerms: prev.ppdbTerms.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleSaveEditedPpdbTerm = (index: number) => {
+    if (!editingTermText.trim()) return;
+    setPpdbForm((prev) => ({
+      ...prev,
+      ppdbTerms: prev.ppdbTerms.map((t, i) => (i === index ? editingTermText.trim() : t)),
+    }));
+    setEditingTermIndex(null);
+    setEditingTermText('');
+  };
+
+  const handleMovePpdbTerm = (index: number, direction: 'up' | 'down') => {
+    setPpdbForm((prev) => {
+      const copy = [...prev.ppdbTerms];
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= copy.length) return prev;
+      const temp = copy[index];
+      copy[index] = copy[targetIndex];
+      copy[targetIndex] = temp;
+      return { ...prev, ppdbTerms: copy };
+    });
+  };
 
   // Handle Save Salary Settings
   const handleSaveSalarySettings = (e: React.FormEvent) => {
@@ -877,6 +1003,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         >
           <Building className="w-4 h-4 text-amber-500" />
           <span>Profil Lembaga & Kwitansi</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('ppdb-terms')}
+          className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+            activeSubTab === 'ppdb-terms'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <FileText className="w-4 h-4 text-indigo-500" />
+          <span>Ketentuan &amp; Bukti PPDB</span>
         </button>
 
         <button
@@ -2380,6 +2518,334 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* SUB-TAB: PENGATURAN KETENTUAN & BUKTI PPDB                */}
+      {/* ========================================================= */}
+      {activeSubTab === 'ppdb-terms' && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          {ppdbSavedToast && (
+            <div className="p-4 bg-emerald-500 text-white rounded-2xl shadow-xl flex items-center gap-3 text-xs font-bold animate-in slide-in-from-top-3">
+              <CheckCircle2 className="w-5 h-5 shrink-0" />
+              <span>
+                Pengaturan Dokumen &amp; Ketentuan PPDB berhasil disimpan! Format baru akan langsung diterapkan pada Bukti Registrasi Cetak (A4) &amp; Download PNG.
+              </span>
+            </div>
+          )}
+
+          {/* Top Banner Info */}
+          <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-extrabold uppercase tracking-wider">
+                <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                Kustomisasi Format Bukti Pendaftaran PPDB
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 font-heading">
+                Ketentuan &amp; Petunjuk Pendaftaran Siswa Baru
+              </h3>
+              <p className="text-xs text-slate-500 max-w-2xl leading-relaxed">
+                Atur judul dokumen, subjudul, serta butir-butir aturan/petunjuk pendaftaran yang tercetak pada lembar <strong>Bukti Registrasi PPDB</strong>. Anda bebas menghapus atau menambahkan ketentuan sesuai kebijakan bimbel Anda (tanpa trial gratis jika tidak ada).
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleResetPpdbDefaults}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer border border-slate-200"
+                title="Kembalikan semua ketentuan ke teks standar bawaan sistem"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset Standar</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Main 2-Column Grid: Form Editor (Left) & Real-Time Document Preview (Right) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* LEFT COLUMN: Editor Form (7 Cols) */}
+            <div className="lg:col-span-7 space-y-5">
+              <form onSubmit={handleSavePpdbSettings} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5">
+                <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-heading pb-3 border-b border-slate-100 flex items-center gap-2">
+                  <Edit className="w-4 h-4 text-indigo-600" />
+                  <span>1. Pengaturan Judul &amp; Subjudul Dokumen</span>
+                </h4>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Subjudul Dokumen Bukti Pendaftaran
+                    </label>
+                    <input
+                      type="text"
+                      value={ppdbForm.ppdbDocSubtitle}
+                      onChange={(e) => setPpdbForm({ ...ppdbForm, ppdbDocSubtitle: e.target.value })}
+                      placeholder="Contoh: Penerimaan Peserta Didik Baru & Registrasi Program Belajar"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                      required
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Dicantumkan tepat di bawah teks "BUKTI PENDAFTARAN PESERTA DIDIK BARU".
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Judul Bagian Ketentuan
+                    </label>
+                    <input
+                      type="text"
+                      value={ppdbForm.ppdbTermsTitle}
+                      onChange={(e) => setPpdbForm({ ...ppdbForm, ppdbTermsTitle: e.target.value })}
+                      placeholder="Contoh: KETENTUAN & PETUNJUK PENDAFTARAN:"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500 uppercase font-mono"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-md shadow-indigo-600/20"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Simpan Perubahan Pengaturan PPDB</span>
+                  </button>
+                </div>
+              </form>
+
+              {/* Ketentuan Points List Management */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div>
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-heading flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-500" />
+                      <span>2. Butir-Butir Ketentuan &amp; Petunjuk PPDB</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Kelola butir aturan yang akan tampil sebagai poin bernomor
+                    </p>
+                  </div>
+                  <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-full">
+                    {ppdbForm.ppdbTerms.length} Butir
+                  </span>
+                </div>
+
+                {/* Form Tambah Butir Ketentuan Baru */}
+                <form onSubmit={handleAddPpdbTerm} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newPpdbTerm}
+                    onChange={(e) => setNewPpdbTerm(e.target.value)}
+                    placeholder="Tulis butir ketentuan baru (contoh: Biaya pendaftaran wajib diselesaikan saat daftar)..."
+                    className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newPpdbTerm.trim()}
+                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Tambah</span>
+                  </button>
+                </form>
+
+                {/* List of current terms */}
+                <div className="space-y-2.5 pt-1">
+                  {ppdbForm.ppdbTerms.map((term, index) => (
+                    <div
+                      key={index}
+                      className="p-3.5 bg-slate-50 hover:bg-indigo-50/40 rounded-xl border border-slate-200 transition flex items-start gap-3 group"
+                    >
+                      <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                        {index + 1}
+                      </span>
+
+                      {editingTermIndex === index ? (
+                        <div className="flex-1 space-y-2">
+                          <textarea
+                            rows={2}
+                            value={editingTermText}
+                            onChange={(e) => setEditingTermText(e.target.value)}
+                            className="w-full p-2 bg-white border border-indigo-400 rounded-lg text-xs font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500"
+                          />
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEditedPpdbTerm(index)}
+                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg transition cursor-pointer"
+                            >
+                              Simpan
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingTermIndex(null);
+                                setEditingTermText('');
+                              }}
+                              className="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[11px] font-bold rounded-lg transition cursor-pointer"
+                            >
+                              Batal
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex-1">
+                          <p className="text-xs text-slate-800 font-medium leading-relaxed">
+                            {term}
+                          </p>
+                        </div>
+                      )}
+
+                      {editingTermIndex !== index && (
+                        <div className="flex items-center gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition">
+                          {/* Move Up */}
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            onClick={() => handleMovePpdbTerm(index, 'up')}
+                            className="p-1.5 text-slate-400 hover:text-slate-800 disabled:opacity-30 rounded transition cursor-pointer"
+                            title="Pindah ke Atas"
+                          >
+                            ↑
+                          </button>
+                          {/* Move Down */}
+                          <button
+                            type="button"
+                            disabled={index === ppdbForm.ppdbTerms.length - 1}
+                            onClick={() => handleMovePpdbTerm(index, 'down')}
+                            className="p-1.5 text-slate-400 hover:text-slate-800 disabled:opacity-30 rounded transition cursor-pointer"
+                            title="Pindah ke Bawah"
+                          >
+                            ↓
+                          </button>
+                          {/* Edit */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingTermIndex(index);
+                              setEditingTermText(term);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-amber-600 rounded transition cursor-pointer"
+                            title="Edit Butir Ini"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          {/* Delete */}
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePpdbTerm(index)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded transition cursor-pointer"
+                            title="Hapus Butir Ini"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {ppdbForm.ppdbTerms.length === 0 && (
+                    <div className="p-6 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-xs">
+                      Belum ada butir ketentuan yang ditambahkan. Gunakan form di atas untuk menambahkan.
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={(e) => handleSavePpdbSettings(e as any)}
+                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center gap-2 transition cursor-pointer shadow-md shadow-indigo-600/20"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Simpan Seluruh Ketentuan PPDB</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT COLUMN: Real-Time Preview Card (5 Cols) */}
+            <div className="lg:col-span-5 space-y-4 sticky top-6">
+              <div className="bg-slate-900 p-4 rounded-2xl text-white shadow-xl border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Pratinjau Lembar Bukti PPDB</span>
+                  </span>
+                  <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono">
+                    Live Sample
+                  </span>
+                </div>
+
+                {/* Simulated Paper Section */}
+                <div className="bg-white rounded-xl p-4 sm:p-5 text-slate-900 space-y-3 shadow-md border border-slate-300">
+                  {/* Kop */}
+                  <div className="border-b-2 border-slate-900 pb-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-950 text-white font-black text-xs flex items-center justify-center shrink-0">
+                        {settings.bimbelName?.slice(0, 2).toUpperCase() || 'SB'}
+                      </div>
+                      <div>
+                        <p className="font-black text-xs text-slate-950 uppercase leading-none">
+                          {settings.bimbelName || 'BIMBEL SIGMA'}
+                        </p>
+                        <p className="text-[9px] text-amber-700 italic font-bold">
+                          "{settings.tagline || 'Belajar Sampai Paham'}"
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-bold bg-indigo-50 text-indigo-900 border border-indigo-200 px-1.5 py-0.5 rounded">
+                      PPDB 2026/2027
+                    </span>
+                  </div>
+
+                  {/* Title */}
+                  <div className="text-center pt-0.5">
+                    <p className="font-black text-[11px] text-slate-900 uppercase">
+                      BUKTI PENDAFTARAN PESERTA DIDIK BARU
+                    </p>
+                    <p className="text-[9px] text-slate-500 font-medium leading-tight">
+                      {ppdbForm.ppdbDocSubtitle || 'Penerimaan Peserta Didik Baru'}
+                    </p>
+                  </div>
+
+                  {/* Callout */}
+                  <div className="p-2.5 bg-slate-900 text-white rounded-lg flex items-center justify-between">
+                    <div>
+                      <p className="text-[8px] uppercase tracking-wider text-slate-400">No. Registrasi</p>
+                      <p className="text-xs font-black text-amber-400 font-mono">REG-2026-001</p>
+                    </div>
+                    <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-bold">
+                      Terdaftar
+                    </span>
+                  </div>
+
+                  {/* Ketentuan Box in Preview */}
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-300 space-y-1">
+                    <p className="font-bold text-[10px] text-slate-900 uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-indigo-600" />
+                      <span>{ppdbForm.ppdbTermsTitle || 'KETENTUAN & PETUNJUK PENDAFTARAN:'}</span>
+                    </p>
+                    <ol className="list-decimal list-inside space-y-1 text-slate-700 text-[10px] leading-relaxed">
+                      {ppdbForm.ppdbTerms.map((t, idx) => (
+                        <li key={idx} className="pl-0.5">
+                          {t}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  <p className="text-[8px] text-slate-400 text-center italic">
+                    *Tanda tangan Orang Tua &amp; Administrasi dicetak di bagian bawah lembar A4.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

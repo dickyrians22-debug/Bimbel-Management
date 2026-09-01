@@ -7,6 +7,7 @@ import {
   Clock,
   Menu,
   KeyRound,
+  Globe,
 } from 'lucide-react';
 import { UserSession, UserRole, UserAccount, BimbelSettings } from '../../types';
 import { UserAvatar } from '../common/UserAvatar';
@@ -21,6 +22,7 @@ interface NavbarProps {
   onResetData?: () => void;
   onToggleMobileSidebar: () => void;
   onOpenChangePasswordModal?: () => void;
+  onOpenPublicPortal?: () => void;
   todayAttendanceCount?: number;
   totalStudentsCount?: number;
 }
@@ -32,6 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
   onToggleMobileSidebar,
   onOpenChangePasswordModal,
+  onOpenPublicPortal,
 }) => {
   const [timeStr, setTimeStr] = React.useState('');
 
@@ -173,6 +176,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-amber-300 hover:bg-slate-800 transition cursor-pointer"
               >
                 <KeyRound className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Portal Publik Button */}
+            {onOpenPublicPortal && (
+              <button
+                onClick={onOpenPublicPortal}
+                title="Buka Halaman Portal Publik (PPDB & Cek Mandiri)"
+                className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-indigo-900/40 hover:bg-indigo-800/70 text-indigo-300 border border-indigo-700/50 hover:border-indigo-600 text-xs font-bold transition cursor-pointer active:scale-95 shrink-0"
+              >
+                <Globe className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Portal Publik</span>
               </button>
             )}
 

@@ -15,6 +15,7 @@ import {
   Settings,
   Wallet,
   Receipt,
+  UserPlus,
 } from 'lucide-react';
 import { ActiveTab, UserSession, BimbelSettings } from '../../types';
 import { UserAvatar } from '../common/UserAvatar';
@@ -27,6 +28,7 @@ interface SidebarProps {
   onCloseMobile?: () => void;
   todayAttendanceCount: number;
   totalStudentsCount: number;
+  prospectiveStudentsCount?: number;
   settings?: BimbelSettings;
 }
 
@@ -38,6 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
   todayAttendanceCount,
   totalStudentsCount,
+  prospectiveStudentsCount = 0,
   settings,
 }) => {
   const role = currentUser.role;
@@ -71,6 +74,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           badge: totalStudentsCount,
           badgeColor: 'bg-indigo-100 text-indigo-700',
           description: 'Kelola data & tarif les siswa',
+        },
+        {
+          id: 'ppdb',
+          label: 'PPDB & Calon Siswa',
+          icon: <UserPlus className="w-4 h-4 text-indigo-600" />,
+          badge: prospectiveStudentsCount > 0 ? `${prospectiveStudentsCount} Pendaftar` : undefined,
+          badgeColor: 'bg-amber-100 text-amber-800 font-extrabold',
+          description: 'Pendaftaran online & trial siswa baru',
         },
         {
           id: 'attendance',
@@ -142,6 +153,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           badge: totalStudentsCount,
           badgeColor: 'bg-slate-100 text-slate-700',
           description: 'Profil kelas & kontak ortu',
+        },
+        {
+          id: 'ppdb',
+          label: 'PPDB & Trial Siswa',
+          icon: <UserPlus className="w-4 h-4 text-indigo-600" />,
+          badge: prospectiveStudentsCount > 0 ? `${prospectiveStudentsCount}` : undefined,
+          badgeColor: 'bg-amber-100 text-amber-800',
+          description: 'Data trial & calon siswa baru',
         },
         {
           id: 'print-cards',

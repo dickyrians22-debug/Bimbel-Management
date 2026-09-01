@@ -1,4 +1,4 @@
-import { Student, AttendanceRecord, IncomeRecord, ExpenseRecord, UserSession, UserAccount, BimbelSettings } from '../types';
+import { Student, AttendanceRecord, IncomeRecord, ExpenseRecord, UserSession, UserAccount, BimbelSettings, ProspectiveStudent } from '../types';
 import { DEFAULT_WA_TEMPLATES } from './whatsapp';
 
 export const DEFAULT_ACCOUNTS: UserAccount[] = [
@@ -96,6 +96,17 @@ export const DEFAULT_SETTINGS: BimbelSettings = {
   sidebarFooterTagline: '“Belajar Sampai Paham”',
   sidebarFooterNote: 'Data tersimpan aman di Database Cloud & Browser',
   accentColor: 'indigo',
+
+  // Default Pengaturan Dokumen PPDB (Tanpa klaim trial gratis jika tidak dikehendaki)
+  ppdbDocSubtitle: 'Penerimaan Peserta Didik Baru & Registrasi Program Bimbingan Belajar',
+  ppdbTermsTitle: 'KETENTUAN & PETUNJUK PENDAFTARAN:',
+  ppdbTerms: [
+    'Lembar ini merupakan bukti sah pendaftaran calon peserta didik baru di Bimbel.',
+    'Admin Bimbel akan segera menghubungi orang tua / wali murid melalui WhatsApp untuk konfirmasi pemilihan jadwal dan mata pelajaran.',
+    'Penyelesaian administrasi pendaftaran & SPP dilakukan sebelum sesi pembelajaran pertama dimulai.',
+    'Siswa yang telah terdaftar resmi akan mendapatkan akses mandiri ke Portal Siswa untuk memantau absensi dan materi belajar.',
+  ],
+
   ownerDashboardBadge: 'Executive Dashboard (Owner Access)',
   ownerDashboardTitle: '',
   ownerDashboardMessage: 'Pantau metrik finansial, absensi digital real-time, dan pembukuan tahunan dalam satu pintu.',
@@ -581,3 +592,48 @@ export { INITIAL_ATTENDANCE } from '../data/initialAttendance';
 export const INITIAL_INCOMES: IncomeRecord[] = [];
 
 export const INITIAL_EXPENSES: ExpenseRecord[] = [];
+
+export const INITIAL_PROSPECTIVE_STUDENTS: ProspectiveStudent[] = [
+  {
+    id: 'ppdb-2026-001',
+    registrationNumber: 'REG-2026-001',
+    studentName: 'Muhammad Rizky Pratama',
+    nickname: 'Rizky',
+    gender: 'L',
+    schoolOrigin: 'SDN 1 Blora',
+    level: 'SD',
+    gradeDetail: 'Kelas 5 SD',
+    classType: 'Privat',
+    interestedSubjects: ['Matematika', 'IPA'],
+    preferredSchedule: 'Selasa & Jumat (16.00 - 17.30)',
+    parentName: 'Hendra Pratama',
+    parentPhone: '081234567891',
+    address: 'Jl. Pemuda No. 14, Blora',
+    notes: 'Ingin persiapan olimpiade matematika SD dan penguatan IPA',
+    status: 'Jadwal Trial',
+    trialDate: '2026-09-05',
+    registrationDate: '2026-09-01',
+    createdAt: '2026-09-01T08:30:00Z',
+  },
+  {
+    id: 'ppdb-2026-002',
+    registrationNumber: 'REG-2026-002',
+    studentName: 'Annisa Rahmadani',
+    nickname: 'Nisa',
+    gender: 'P',
+    schoolOrigin: 'SMPN 2 Blora',
+    level: 'SMP',
+    gradeDetail: 'Kelas 8 SMP',
+    classType: 'Grup',
+    interestedSubjects: ['Bahasa Inggris', 'Matematika'],
+    preferredSchedule: 'Senin & Kamis (15.30 - 17.00)',
+    parentName: 'Siti Rahmawati',
+    parentPhone: '085712348899',
+    address: 'Perum Taman Asri Blok C2, Blora',
+    notes: 'Minat les grup sore bersama teman sekelas',
+    status: 'Baru',
+    registrationDate: '2026-09-01',
+    createdAt: '2026-09-01T09:15:00Z',
+  },
+];
+

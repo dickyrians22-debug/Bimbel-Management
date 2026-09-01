@@ -31,9 +31,10 @@
     display: block !important;
   }
 
-  /* Mode A & Mode B full A4 sheets */
+  /* Mode A & Mode B full A4 sheets & Registration Receipt */
   #printable-report-mode-a,
-  #printable-group-sheet {
+  #printable-group-sheet,
+  #printable-registration-receipt {
     width: 100% !important;
     max-width: 100% !important;
     min-height: auto !important;

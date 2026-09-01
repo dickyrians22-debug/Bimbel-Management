@@ -15,6 +15,7 @@ import {
   ChevronDown,
   ChevronUp,
   KeyRound,
+  Globe,
 } from 'lucide-react';
 import { UserRole, UserSession, UserAccount, BimbelSettings, Student } from '../../types';
 import { UserAvatar } from '../common/UserAvatar';
@@ -24,6 +25,7 @@ interface AuthLoginViewProps {
   users: UserAccount[];
   students?: Student[];
   settings?: BimbelSettings;
+  onOpenPublicPortal?: () => void;
 }
 
 export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
@@ -31,6 +33,7 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
   users,
   students = [],
   settings,
+  onOpenPublicPortal,
 }) => {
   const [selectedRole, setSelectedRole] = useState<UserRole>('owner');
   const [username, setUsername] = useState('');
@@ -197,6 +200,31 @@ export const AuthLoginView: React.FC<AuthLoginViewProps> = ({
       </div>
 
       <div className="mt-7 sm:mx-auto sm:w-full sm:max-w-xl relative z-10">
+        {onOpenPublicPortal && (
+          <button
+            type="button"
+            onClick={onOpenPublicPortal}
+            className="w-full mb-4 py-3 px-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-amber-500 hover:from-indigo-500 hover:to-amber-400 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center justify-between transition cursor-pointer border border-white/20 group"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+                <Globe className="w-4 h-4 text-white" />
+              </div>
+              <div className="text-left">
+                <p className="text-xs font-black font-heading text-white">
+                  Portal Layanan Publik (PPDB &amp; Cek Mandiri)
+                </p>
+                <p className="text-[10px] text-indigo-100 font-medium">
+                  Pendaftaran Siswa Baru, Cek Presensi &amp; Iuran Tanpa Login
+                </p>
+              </div>
+            </div>
+            <span className="px-2.5 py-1 rounded-lg bg-white/20 group-hover:bg-white/30 text-white text-[11px] font-bold">
+              Buka Portal →
+            </span>
+          </button>
+        )}
+
         <div className="bg-white/95 backdrop-blur-md py-8 px-6 sm:px-10 shadow-2xl rounded-3xl border border-white/20 space-y-6">
           {/* 3 Role Selection Tabs */}
           <div>
