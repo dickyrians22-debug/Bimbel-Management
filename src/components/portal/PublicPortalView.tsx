@@ -26,7 +26,10 @@ import {
   Calendar,
   MessageCircle,
   ArrowRight,
+  ArrowLeft,
   LogIn,
+  LogOut,
+  LayoutDashboard,
   HeartHandshake,
   Star,
   Info,
@@ -40,6 +43,7 @@ import {
   StudentLevel,
   ClassType,
   UserAccount,
+  UserSession,
 } from '../../types';
 import {
   formatRupiah,
@@ -59,8 +63,11 @@ interface PublicPortalViewProps {
   prospectiveStudents: ProspectiveStudent[];
   settings: BimbelSettings;
   users?: UserAccount[];
+  currentUser?: UserSession | null;
   onRegisterProspectiveStudent: (data: ProspectiveStudent) => void;
   onOpenLogin: () => void;
+  onBackToDashboard?: () => void;
+  onLogout?: () => void;
 }
 
 export const PublicPortalView: React.FC<PublicPortalViewProps> = ({
@@ -70,8 +77,11 @@ export const PublicPortalView: React.FC<PublicPortalViewProps> = ({
   prospectiveStudents,
   settings,
   users = [],
+  currentUser = null,
   onRegisterProspectiveStudent,
   onOpenLogin,
+  onBackToDashboard,
+  onLogout,
 }) => {
   // Navigation tabs in Portal
   const [activeTab, setActiveTab] = useState<'ppdb' | 'cek-presensi' | 'info'>('ppdb');
@@ -435,18 +445,45 @@ Mohon konfirmasi ketersediaan jadwal & informasi pendaftaran belajar. Terima kas
               </div>
             </div>
 
-            {/* Top Right Action: Staff Login Button */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={onOpenLogin}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 hover:border-indigo-200 shadow-xs transition cursor-pointer"
-                title="Akses masuk untuk Owner, Tutor & Pengajar"
-              >
-                <LogIn className="w-4 h-4 text-indigo-600" />
-                <span className="hidden sm:inline">Masuk Login Internal</span>
-                <span className="sm:hidden">Login</span>
-              </button>
+            {/* Top Right Action: Return to Dashboard or Staff Login Button */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {currentUser ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={onBackToDashboard}
+                    className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition cursor-pointer"
+                    title={`Kembali ke dashboard sebagai ${currentUser.name} (${currentUser.role.toUpperCase()})`}
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Kembali ke Dashboard</span>
+                    <span className="hidden md:inline-block px-1.5 py-0.5 rounded text-[10px] bg-indigo-500/50 text-indigo-100 uppercase">
+                      {currentUser.role}
+                    </span>
+                  </button>
+                  {onLogout && (
+                    <button
+                      type="button"
+                      onClick={onLogout}
+                      className="p-2 sm:p-2.5 rounded-xl text-slate-500 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition cursor-pointer"
+                      title="Keluar / Logout Akun"
+                    >
+                      <LogOut className="w-4 h-4" />
+                    </button>
+                  )}
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onOpenLogin}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200 hover:border-indigo-200 shadow-xs transition cursor-pointer"
+                  title="Akses masuk untuk Owner, Tutor & Pengajar"
+                >
+                  <LogIn className="w-4 h-4 text-indigo-600" />
+                  <span className="hidden sm:inline">Masuk Login Internal</span>
+                  <span className="sm:hidden">Login</span>
+                </button>
+              )}
             </div>
           </div>
 

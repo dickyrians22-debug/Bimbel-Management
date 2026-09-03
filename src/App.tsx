@@ -1380,11 +1380,14 @@ export default function App() {
         incomes={incomes}
         prospectiveStudents={prospectiveStudents}
         users={users}
+        currentUser={currentUser}
         onRegisterProspectiveStudent={handleSaveProspectiveStudent}
         onOpenLogin={() => {
           setShowPublicPortal(false);
           setCurrentUser(null);
         }}
+        onBackToDashboard={() => setShowPublicPortal(false)}
+        onLogout={handleLogout}
       />
     );
   }
