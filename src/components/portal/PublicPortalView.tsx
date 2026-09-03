@@ -74,7 +74,7 @@ export const PublicPortalView: React.FC<PublicPortalViewProps> = ({
   onOpenLogin,
 }) => {
   // Navigation tabs in Portal
-  const [activeTab, setActiveTab] = useState<'ppdb' | 'cek-mandiri' | 'info'>('ppdb');
+  const [activeTab, setActiveTab] = useState<'ppdb' | 'cek-presensi' | 'info'>('ppdb');
 
   // --- PPDB FORM STATE ---
   const [formData, setFormData] = useState({
@@ -102,12 +102,12 @@ export const PublicPortalView: React.FC<PublicPortalViewProps> = ({
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [receiptModalProspective, setReceiptModalProspective] = useState<ProspectiveStudent | null>(null);
 
-  // --- CEK MANDIRI STATE ---
+  // --- CEK MANDIRI & PRESENSI SISWA STATE ---
   const [searchQuery, setSearchQuery] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
   const [matchedStudent, setMatchedStudent] = useState<Student | null>(null);
-  const [matchedProspective, setMatchedProspective] = useState<ProspectiveStudent | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
+  const [matchingStudentsList, setMatchingStudentsList] = useState<Student[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<number>(0); // 0 = Semua Periode (Semua Bulan)
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
 
   const bimbelName = settings?.bimbelName || 'BIMBEL SIGMA';
@@ -117,36 +117,60 @@ export const PublicPortalView: React.FC<PublicPortalViewProps> = ({
   const address = settings?.address || 'Blora, Jawa Tengah';
   const bankInfo = settings?.bankInfo || 'BCA: 8830-1234-56 a.n Bimbel';
 
-  // Common subjects list
-  const AVAILABLE_SUBJECTS = [
-    'Matematika',
-    'IPA',
-    'Bahasa Inggris',
-    'Bahasa Indonesia',
-    'IPS / PKn',
-    'Calistung (Baca, Tulis, Hitung)',
-    'Persiapan Ujian Sekolah',
-    'Persiapan SNBT / UTBK',
-    'Semua Mapel (All-in-One)',
-  ];
+  // Common subjects list from settings or defaults
+  const AVAILABLE_SUBJECTS = (settings?.ppdbAvailableSubjects && settings.ppdbAvailableSubjects.length > 0)
+    ? settings.ppdbAvailableSubjects
+    : [
+        'Matematika',
+        'IPA',
+        'Bahasa Inggris',
+        'Bahasa Indonesia',
+        'IPS / PKn',
+        'Calistung (Baca, Tulis, Hitung)',
+        'Persiapan Ujian Sekolah',
+        'Persiapan SNBT / UTBK',
+        'Semua Mapel (All-in-One)',
+      ];
 
-  // Preferred Schedule Options
-  const AVAILABLE_DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+  // Preferred Schedule Options from settings or defaults
+  const AVAILABLE_DAYS = (settings?.ppdbAvailableDays && settings.ppdbAvailableDays.length > 0)
+    ? settings.ppdbAvailableDays
+    : ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+
   const DAY_PRESETS = [
     { label: 'Senin & Rabu', days: ['Senin', 'Rabu'] },
     { label: 'Selasa & Kamis', days: ['Selasa', 'Kamis'] },
     { label: 'Senin, Rabu, Jumat', days: ['Senin', 'Rabu', 'Jumat'] },
     { label: 'Selasa, Kamis, Sabtu', days: ['Selasa', 'Kamis', 'Sabtu'] },
     { label: 'Weekend (Sabtu-Minggu)', days: ['Sabtu', 'Minggu'] },
-  ];
-  const TIME_SLOTS = [
-    { id: 'pagi', label: 'Pagi (08:00 - 10:00 WIB)', icon: '☀️' },
-    { id: 'siang', label: 'Siang (13:00 - 15:00 WIB)', icon: '🌤️' },
-    { id: 'sore1', label: 'Sore 1 (15:30 - 17:00 WIB)', icon: '🌅' },
-    { id: 'sore2', label: 'Sore 2 (16:00 - 17:30 WIB)', icon: '🌆' },
-    { id: 'malam', label: 'Malam (18:30 - 20:00 WIB)', icon: '🌙' },
-    { id: 'fleksibel', label: 'Fleksibel / Menyesuaikan', icon: '🕒' },
-  ];
+  ].filter(preset => preset.days.every(d => AVAILABLE_DAYS.includes(d)));
+
+  const rawTimeSlots = (settings?.ppdbAvailableTimeSlots && settings.ppdbAvailableTimeSlots.length > 0)
+    ? settings.ppdbAvailableTimeSlots
+    : [
+        'Pagi (08:00 - 10:00 WIB)',
+        'Siang (13:00 - 15:00 WIB)',
+        'Sore 1 (15:30 - 17:00 WIB)',
+        'Sore 2 (16:00 - 17:30 WIB)',
+        'Malam (18:30 - 20:00 WIB)',
+        'Fleksibel / Menyesuaikan',
+      ];
+
+  const TIME_SLOTS = rawTimeSlots.map((slot, idx) => {
+    let icon = '🕒';
+    const lower = slot.toLowerCase();
+    if (lower.includes('pagi')) icon = '☀️';
+    else if (lower.includes('siang')) icon = '🌤️';
+    else if (lower.includes('sore 1') || lower.includes('15:')) icon = '🌅';
+    else if (lower.includes('sore') || lower.includes('16:')) icon = '🌆';
+    else if (lower.includes('malam') || lower.includes('18:') || lower.includes('19:')) icon = '🌙';
+    else if (lower.includes('fleksibel')) icon = '🕒';
+    return {
+      id: `slot-${idx}`,
+      label: slot,
+      icon,
+    };
+  });
 
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
@@ -277,32 +301,97 @@ Mohon konfirmasi ketersediaan jadwal & informasi pendaftaran belajar. Terima kas
     sendWhatsAppDirect(contactPhone, message);
   };
 
-  // Search Cek Mandiri
-  const handleSearchMandiri = (e: React.FormEvent) => {
-    e.preventDefault();
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return;
+  // Helper to count total all-time attendance for a student
+  const getStudentAllTimeAttendance = (student: Student) => {
+    const sId = (student.id || '').trim();
+    const sCode = (student.code || '').trim().toLowerCase();
+    const sName = (student.name || '').trim().toLowerCase();
+
+    return attendance.filter((a) => {
+      const aId = (a.studentId || '').trim();
+      const aCode = (a.studentCode || '').trim().toLowerCase();
+      const aName = (a.studentName || '').trim().toLowerCase();
+      return (
+        (sId && aId === sId) ||
+        (sCode && aCode && aCode === sCode) ||
+        (sName && aName && aName === sName)
+      );
+    });
+  };
+
+  // Search Presensi Siswa Resmi
+  const handleSearchMandiri = (e?: React.FormEvent, customQuery?: string) => {
+    if (e) e.preventDefault();
+    const query = (customQuery !== undefined ? customQuery : searchQuery).trim().toLowerCase();
+    if (!query) {
+      setHasSearched(false);
+      setMatchedStudent(null);
+      setMatchingStudentsList([]);
+      return;
+    }
 
     setHasSearched(true);
+    const cleanPhone = query.replace(/[^0-9]/g, '');
 
-    // 1. Check in official students database
-    const foundStd = students.find((s) => {
-      const codeMatch = (s.code || '').toLowerCase() === query;
-      const nameMatch = (s.name || '').toLowerCase().includes(query);
-      const phoneMatch = (s.parentPhone || '').replace(/[^0-9]/g, '').includes(query.replace(/[^0-9]/g, ''));
-      return codeMatch || nameMatch || (query.length >= 4 && phoneMatch);
+    // 1. Direct exact match check
+    const exactCode = students.filter((s) => (s.code || '').trim().toLowerCase() === query);
+    const exactName = students.filter((s) => (s.name || '').trim().toLowerCase() === query);
+
+    if (exactCode.length === 1) {
+      setMatchedStudent(exactCode[0]);
+      setMatchingStudentsList(exactCode);
+      return;
+    }
+
+    if (exactName.length === 1) {
+      setMatchedStudent(exactName[0]);
+      setMatchingStudentsList(exactName);
+      return;
+    }
+
+    // 2. Broad search across official registered students
+    const results = students.filter((s) => {
+      const code = (s.code || '').trim().toLowerCase();
+      const name = (s.name || '').trim().toLowerCase();
+      const phone = (s.parentPhone || '').replace(/[^0-9]/g, '');
+
+      const isCodeMatch = code === query || code.startsWith(query) || code.includes(query);
+      const isNameMatch = name.includes(query) || name.split(' ').some((part) => part.startsWith(query));
+      const isPhoneMatch = cleanPhone.length >= 4 && phone.includes(cleanPhone);
+
+      return isCodeMatch || isNameMatch || isPhoneMatch;
     });
 
-    // 2. Check in prospective students database
-    const foundProsp = prospectiveStudents.find((p) => {
-      const regMatch = (p.registrationNumber || '').toLowerCase() === query;
-      const nameMatch = (p.studentName || '').toLowerCase().includes(query);
-      const phoneMatch = (p.parentPhone || '').replace(/[^0-9]/g, '').includes(query.replace(/[^0-9]/g, ''));
-      return regMatch || nameMatch || (query.length >= 4 && phoneMatch);
+    // Rank results by relevance: exact code > exact name > name starts with > others
+    results.sort((a, b) => {
+      const aCode = (a.code || '').toLowerCase();
+      const bCode = (b.code || '').toLowerCase();
+      const aName = (a.name || '').toLowerCase();
+      const bName = (b.name || '').toLowerCase();
+
+      if (aCode === query) return -1;
+      if (bCode === query) return 1;
+      if (aName === query) return -1;
+      if (bName === query) return 1;
+      if (aName.startsWith(query) && !bName.startsWith(query)) return -1;
+      if (!aName.startsWith(query) && bName.startsWith(query)) return 1;
+      return aName.localeCompare(bName);
     });
 
-    setMatchedStudent(foundStd || null);
-    setMatchedProspective(foundProsp || null);
+    setMatchingStudentsList(results);
+
+    if (results.length === 1) {
+      setMatchedStudent(results[0]);
+    } else {
+      // Multiple matches: user can click the exact student from candidate list
+      setMatchedStudent(null);
+    }
+  };
+
+  const handleSelectStudent = (std: Student) => {
+    setMatchedStudent(std);
+    setSearchQuery(std.code || std.name);
+    setHasSearched(true);
   };
 
   const handleCopyBank = (text: string) => {
@@ -311,10 +400,14 @@ Mohon konfirmasi ketersediaan jadwal & informasi pendaftaran belajar. Terima kas
     setTimeout(() => setCopiedBank(null), 2000);
   };
 
-  // Calculate monthly summary for matched student
+  // Calculate summary for matched student
   const studentSummary = matchedStudent
     ? calculateStudentMonthlySummary(matchedStudent, selectedMonth, selectedYear, attendance, incomes)
     : null;
+
+  const matchedStudentAllTimeRecords = matchedStudent
+    ? getStudentAllTimeAttendance(matchedStudent)
+    : [];
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
@@ -374,15 +467,15 @@ Mohon konfirmasi ketersediaan jadwal & informasi pendaftaran belajar. Terima kas
 
             <button
               type="button"
-              onClick={() => setActiveTab('cek-mandiri')}
+              onClick={() => setActiveTab('cek-presensi')}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-                activeTab === 'cek-mandiri'
+                activeTab === 'cek-presensi'
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <Search className="w-4 h-4" />
-              <span>Cek Mandiri Siswa &amp; SPP</span>
+              <span>Cek Presensi &amp; Riwayat Belajar</span>
             </button>
 
             <button
@@ -408,13 +501,13 @@ Mohon konfirmasi ketersediaan jadwal & informasi pendaftaran belajar. Terima kas
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-semibold mb-3">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Pusat Layanan Terpadu Siswa &amp; Calon Siswa Bimbel</span>
+              <span>{settings?.portalBannerBadge || 'Pusat Layanan Terpadu Siswa & Calon Siswa Bimbel'}</span>
             </div>
             <h2 className="text-2xl sm:text-4xl font-black tracking-tight font-heading leading-tight">
-              Selamat Datang di Portal Resmi {bimbelName}
+              {settings?.portalBannerTitle || `Selamat Datang di Portal Resmi ${bimbelName}`}
             </h2>
             <p className="mt-2 text-sm sm:text-base text-slate-300 leading-relaxed">
-              Daftarkan ananda secara online, pantau presensi dan materi belajar harian, serta cek status iuran les secara transparan kapan saja.
+              {settings?.portalBannerSubtitle || 'Daftarkan ananda secara online, pantau presensi dan tanggal kehadiran harian, serta cek status iuran les secara transparan kapan saja.'}
             </p>
           </div>
         </div>
@@ -1069,9 +1162,9 @@ Mohon konfirmasi ketersediaan jadwal & informasi pendaftaran belajar. Terima kas
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 2: CEK MANDIRI SISWA, PRESENSI & SPP */}
+        {/* TAB 2: CEK PRESENSI & RIWAYAT KEDATANGAN SISWA RESMI */}
         {/* ========================================================================= */}
-        {activeTab === 'cek-mandiri' && (
+        {activeTab === 'cek-presensi' && (
           <div className="space-y-8 animate-in fade-in duration-300">
             {/* Search Box */}
             <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 max-w-3xl mx-auto space-y-4">
@@ -1080,49 +1173,58 @@ Mohon konfirmasi ketersediaan jadwal & informasi pendaftaran belajar. Terima kas
                   <Search className="w-6 h-6" />
                 </div>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-900 font-heading">
-                  Cek Mandiri Siswa &amp; Rekap SPP
+                  Cek Presensi &amp; Riwayat Belajar Siswa
                 </h3>
-                <p className="text-xs text-slate-500 max-w-md mx-auto">
-                  Ketik <strong>Kode Siswa (NIS)</strong>, <strong>Nama Siswa</strong>, <strong>No. WhatsApp</strong>, atau <strong>Nomor Registrasi PPDB</strong> untuk mengecek data presensi &amp; iuran.
+                <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                  Ketik <strong>Kode Siswa (NIS)</strong>, <strong>Nama Siswa</strong>, atau <strong>No. WhatsApp</strong> untuk melihat rekapitulasi kehadiran dan materi pembelajaran siswa resmi.
                 </p>
               </div>
 
-              <form onSubmit={handleSearchMandiri} className="flex flex-col sm:flex-row gap-3">
+              <form onSubmit={(e) => handleSearchMandiri(e)} className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Contoh: N0, K4, Naureen, 081234567890, atau REG-2026-001"
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      if (!e.target.value.trim()) {
+                        setHasSearched(false);
+                        setMatchedStudent(null);
+                        setMatchingStudentsList([]);
+                      }
+                    }}
+                    placeholder="Ketik nama atau kode siswa, contoh: N0, K4, Naureen, Kaysa..."
                     className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 font-medium"
                     required
                   />
                 </div>
                 <button
                   type="submit"
-                  className="py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl text-xs sm:text-sm shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition cursor-pointer"
+                  className="py-3 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl text-xs sm:text-sm shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition cursor-pointer shrink-0"
                 >
                   <Search className="w-4 h-4" />
-                  <span>Cari Data</span>
+                  <span>Cari Presensi</span>
                 </button>
               </form>
 
+              {/* Quick student recommendation chips */}
               <div className="flex flex-wrap items-center justify-center gap-2 pt-2 text-[11px] text-slate-500">
-                <span className="font-semibold text-slate-400">Contoh kode siswa demo:</span>
-                {students.slice(0, 5).map((s) => (
+                <span className="font-semibold text-slate-400">Pilihan cepat siswa resmi:</span>
+                {students.slice(0, 8).map((s) => (
                   <button
                     key={s.id}
                     type="button"
                     onClick={() => {
-                      setSearchQuery(s.code);
-                      setHasSearched(true);
+                      setSearchQuery(s.code || s.name);
                       setMatchedStudent(s);
-                      setMatchedProspective(null);
+                      setMatchingStudentsList([s]);
+                      setHasSearched(true);
                     }}
-                    className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-indigo-100 hover:text-indigo-700 text-slate-700 font-mono font-bold transition cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-100 hover:text-indigo-700 text-slate-700 font-mono font-bold transition cursor-pointer flex items-center gap-1"
                   >
-                    {s.code} ({s.name.split(' ')[0]})
+                    <span className="text-indigo-600 font-black">{s.code}</span>
+                    <span className="font-sans font-medium text-slate-600">({s.name.split(' ')[0]})</span>
                   </button>
                 ))}
               </div>
@@ -1131,10 +1233,62 @@ Mohon konfirmasi ketersediaan jadwal & informasi pendaftaran belajar. Terima kas
             {/* SEARCH RESULTS */}
             {hasSearched && (
               <div className="max-w-4xl mx-auto space-y-6">
-                {/* 1. If MATCHED OFFICIAL STUDENT */}
+                {/* CASE A: MULTIPLE STUDENTS MATCHED (CANDIDATE SELECTION LIST) */}
+                {matchingStudentsList.length > 1 && !matchedStudent && (
+                  <div className="bg-white rounded-3xl border border-indigo-100 shadow-sm p-6 sm:p-8 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <h4 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                          <Users className="w-5 h-5 text-indigo-600" />
+                          <span>Ditemukan {matchingStudentsList.length} Siswa yang Cocok</span>
+                        </h4>
+                        <p className="text-xs text-slate-500">
+                          Silakan klik nama siswa yang ingin Anda lihat riwayat presensinya:
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                      {matchingStudentsList.map((cand) => {
+                        const totalRecords = getStudentAllTimeAttendance(cand).length;
+                        return (
+                          <div
+                            key={cand.id}
+                            onClick={() => handleSelectStudent(cand)}
+                            className="p-4 rounded-2xl border border-slate-200 hover:border-indigo-400 bg-slate-50 hover:bg-indigo-50/40 transition cursor-pointer flex items-center justify-between group"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-11 h-11 rounded-xl bg-indigo-600 text-white font-black text-sm flex items-center justify-center font-heading shadow-xs group-hover:scale-105 transition">
+                                {cand.code}
+                              </div>
+                              <div>
+                                <h5 className="text-sm font-bold text-slate-900 group-hover:text-indigo-900 transition">
+                                  {cand.name}
+                                </h5>
+                                <p className="text-[11px] text-slate-500">
+                                  {cand.gradeDetail} • Kelas {cand.classType}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded-md text-[10px] font-bold block mb-1">
+                                {totalRecords} Sesi
+                              </span>
+                              <span className="text-[11px] font-bold text-indigo-600 group-hover:underline">
+                                Pilih &rarr;
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* CASE B: MATCHED OFFICIAL STUDENT - DISPLAY ATTENDANCE HISTORY */}
                 {matchedStudent && studentSummary && (
                   <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden space-y-6 p-6 sm:p-8">
-                    {/* Student Identity Card */}
+                    {/* Student Identity Card: Only Name, Code & Class Info */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
                       <div className="flex items-center gap-3.5">
                         <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white font-black text-xl flex items-center justify-center font-heading shadow-md">
@@ -1146,22 +1300,33 @@ Mohon konfirmasi ketersediaan jadwal & informasi pendaftaran belajar. Terima kas
                               {matchedStudent.name}
                             </h4>
                             <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold rounded-full">
-                              Siswa Aktif
+                              Siswa Resmi
                             </span>
                           </div>
                           <p className="text-xs text-slate-500 mt-0.5">
-                            {matchedStudent.gradeDetail} • Kelas {matchedStudent.classType} • Wali: {matchedStudent.parentName}
+                            {matchedStudent.gradeDetail} • Kelas {matchedStudent.classType}
                           </p>
                         </div>
                       </div>
 
-                      {/* Month Filter Selector */}
-                      <div className="flex items-center gap-2">
+                      {/* Period Filter Selector & Change Student Button */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {matchingStudentsList.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setMatchedStudent(null)}
+                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+                          >
+                            &larr; Ganti Siswa
+                          </button>
+                        )}
+
                         <select
                           value={selectedMonth}
                           onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                          className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700"
+                          className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer"
                         >
+                          <option value={0}>Semua Periode (Riwayat Lengkap)</option>
                           {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                             <option key={m} value={m}>
                               {getMonthNameIndo(m)}
@@ -1171,282 +1336,157 @@ Mohon konfirmasi ketersediaan jadwal & informasi pendaftaran belajar. Terima kas
                         <select
                           value={selectedYear}
                           onChange={(e) => setSelectedYear(Number(e.target.value))}
-                          className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700"
+                          className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 cursor-pointer"
                         >
                           <option value={2026}>2026</option>
                           <option value={2025}>2025</option>
+                          <option value={2024}>2024</option>
                         </select>
                       </div>
                     </div>
 
-                    {/* Metric Stats Cards */}
+                    {/* Attendance Summary Stat Card */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      <div className="p-4 bg-indigo-50/70 border border-indigo-100 rounded-2xl">
-                        <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block">
-                          Kehadiran Masuk
-                        </span>
-                        <p className="text-2xl font-black text-indigo-950 font-heading mt-1">
-                          {studentSummary.presentCount} <span className="text-xs font-medium text-indigo-700">Sesi</span>
-                        </p>
-                      </div>
-
                       <div className="p-4 bg-emerald-50/70 border border-emerald-100 rounded-2xl">
                         <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">
-                          Tarif per Sesi
+                          Total Hadir
                         </span>
-                        <p className="text-lg font-black text-emerald-950 font-heading mt-1">
-                          {formatRupiah(studentSummary.pricePerSession)}
+                        <p className="text-2xl font-black text-emerald-950 font-heading mt-1">
+                          {studentSummary.presentCount} <span className="text-xs font-medium text-emerald-700">Sesi</span>
                         </p>
                       </div>
 
-                      <div className="p-4 bg-amber-50/70 border border-amber-100 rounded-2xl">
-                        <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">
-                          Total Tagihan Les
+                      <div className="p-4 bg-indigo-50/70 border border-indigo-100 rounded-2xl">
+                        <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block">
+                          Periode Terpilih
                         </span>
-                        <p className="text-lg font-black text-amber-950 font-heading mt-1">
-                          {formatRupiah(studentSummary.totalBilled)}
+                        <p className="text-xs font-black text-indigo-950 font-heading mt-2 truncate">
+                          {selectedMonth === 0 ? 'Semua Riwayat Belajar' : `${getMonthNameIndo(selectedMonth)} ${selectedYear}`}
                         </p>
                       </div>
 
                       <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                         <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">
-                          Status Pembayaran
+                          Sesi di Periode Ini
                         </span>
-                        <span
-                          className={`inline-block mt-1 px-2.5 py-1 rounded-lg text-xs font-extrabold ${
-                            studentSummary.paymentStatus === 'Lunas'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : studentSummary.paymentStatus === 'Lebih Bayar'
-                              ? 'bg-purple-100 text-purple-800'
-                              : studentSummary.paymentStatus === 'Kurang Bayar'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-rose-100 text-rose-800'
-                          }`}
-                        >
-                          {studentSummary.paymentStatus}
+                        <p className="text-2xl font-black text-slate-900 font-heading mt-1">
+                          {studentSummary.records.length} <span className="text-xs font-medium text-slate-600">Pertemuan</span>
+                        </p>
+                      </div>
+
+                      <div className="p-4 bg-amber-50/70 border border-amber-100 rounded-2xl">
+                        <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">
+                          Total Sepanjang Waktu
                         </span>
+                        <p className="text-2xl font-black text-amber-950 font-heading mt-1">
+                          {matchedStudentAllTimeRecords.length} <span className="text-xs font-medium text-amber-700">Pertemuan</span>
+                        </p>
                       </div>
                     </div>
 
-                    {/* SECTION: JURNAL PRESENSI & MATERI */}
+                    {/* Notice if 0 records in selected month but exists in other months */}
+                    {selectedMonth !== 0 && studentSummary.records.length === 0 && matchedStudentAllTimeRecords.length > 0 && (
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                        <div className="flex items-center gap-2 text-amber-900 font-medium">
+                          <Info className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span>
+                            Belum ada catatan pada bulan <strong>{getMonthNameIndo(selectedMonth)} {selectedYear}</strong>, namun terdapat <strong>{matchedStudentAllTimeRecords.length} sesi belajar</strong> di bulan lain.
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMonth(0)}
+                          className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs shrink-0 cursor-pointer"
+                        >
+                          Tampilkan Semua Riwayat
+                        </button>
+                      </div>
+                    )}
+
+                    {/* SECTION: DAFTAR TANGGAL KEHADIRAN */}
                     <div className="space-y-3 pt-2">
                       <div className="flex items-center justify-between">
                         <h5 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                           <CalendarCheck2 className="w-4 h-4 text-indigo-600" />
-                          <span>Riwayat Presensi &amp; Materi Pembelajaran ({getMonthNameIndo(selectedMonth)} {selectedYear})</span>
+                          <span>Daftar Tanggal Kehadiran</span>
                         </h5>
                         <span className="text-[11px] text-slate-500 font-semibold">
-                          Total {studentSummary.records.length} Pertemuan Tercatat
+                          {studentSummary.records.length} Tanggal Kehadiran
                         </span>
                       </div>
 
                       {studentSummary.records.length === 0 ? (
-                        <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl text-center text-xs text-slate-500">
-                          Belum ada sesi pembelajaran yang tercatat pada bulan {getMonthNameIndo(selectedMonth)} {selectedYear}.
+                        <div className="p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center text-xs text-slate-500 space-y-1">
+                          <p className="font-bold text-slate-700">Belum ada catatan kehadiran</p>
+                          <p>
+                            {selectedMonth === 0
+                              ? 'Belum ada catatan tanggal kehadiran untuk siswa ini di database.'
+                              : `Belum ada catatan tanggal kehadiran pada bulan ${getMonthNameIndo(selectedMonth)} ${selectedYear}.`}
+                          </p>
                         </div>
                       ) : (
                         <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden">
                           {studentSummary.records.map((rec, idx) => (
-                            <div key={rec.id || idx} className="p-3.5 bg-white hover:bg-slate-50 transition flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                              <div className="flex items-start gap-3">
-                                <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                            <div key={rec.id || idx} className="p-3.5 sm:p-4 bg-white hover:bg-slate-50 transition flex items-center justify-between gap-3 text-xs">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className="w-7 h-7 rounded-xl bg-indigo-50 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0 font-mono">
                                   {idx + 1}
                                 </span>
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold text-slate-900">
-                                      {formatDateIndo(rec.date)}
+                                <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
+                                  <span className="font-bold text-slate-900 text-xs sm:text-sm">
+                                    {formatDateIndo(rec.date)}
+                                  </span>
+                                  {rec.time && (
+                                    <span className="text-slate-400 font-mono text-[11px] flex items-center gap-1">
+                                      <Clock className="w-3 h-3" />
+                                      {rec.time} WIB
                                     </span>
-                                    <span className="text-slate-400">•</span>
-                                    <span className="text-slate-600 font-medium">{rec.time || '15:30'} WIB</span>
-                                    <span
-                                      className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase ${
-                                        rec.status === 'Hadir'
-                                          ? 'bg-emerald-100 text-emerald-800'
-                                          : rec.status === 'Izin'
-                                          ? 'bg-amber-100 text-amber-800'
-                                          : rec.status === 'Sakit'
-                                          ? 'bg-blue-100 text-blue-800'
-                                          : 'bg-rose-100 text-rose-800'
-                                      }`}
-                                    >
-                                      {rec.status}
-                                    </span>
-                                  </div>
-                                  <p className="text-slate-800 font-semibold mt-1">
-                                    Materi: {rec.topic || 'Pendalaman Materi & Latihan Soal'}
-                                  </p>
-                                  {rec.tutorNotes && (
-                                    <p className="text-slate-500 text-[11px] mt-0.5 italic">
-                                      Catatan Tutor: “{rec.tutorNotes}”
-                                    </p>
                                   )}
                                 </div>
                               </div>
 
-                              <div className="text-left sm:text-right shrink-0">
-                                <span className="text-[10px] text-slate-400 block">Tutor Pembimbing</span>
-                                <span className="font-bold text-slate-700 text-xs">{rec.tutorName}</span>
+                              <div className="shrink-0">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-extrabold uppercase ${
+                                    rec.status === 'Hadir'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : rec.status === 'Izin'
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : rec.status === 'Sakit'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-rose-100 text-rose-800'
+                                  }`}
+                                >
+                                  {rec.status}
+                                </span>
                               </div>
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
-
-                    {/* SECTION: PEMBAYARAN & REKENING RESMI */}
-                    {studentSummary.balanceRemaining > 0 && (
-                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-3">
-                        <div className="flex items-start gap-2 text-xs text-amber-900">
-                          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                          <div>
-                            <p className="font-bold">Informasi Pembayaran Iuran Les</p>
-                            <p className="text-[11px] text-amber-800 leading-relaxed mt-0.5">
-                              Sisa tagihan yang belum dibayarkan sebesar <strong>{formatRupiah(studentSummary.balanceRemaining)}</strong>. Pembayaran dapat ditransfer ke rekening resmi bimbel di bawah ini:
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="p-3 bg-white border border-amber-200 rounded-xl flex items-center justify-between gap-3 text-xs">
-                          <div className="font-mono font-bold text-slate-800">
-                            {bankInfo}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleCopyBank(bankInfo)}
-                            className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs flex items-center gap-1 transition cursor-pointer"
-                          >
-                            {copiedBank === bankInfo ? (
-                              <>
-                                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                <span className="text-emerald-600">Disalin</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3.5 h-3.5 text-slate-500" />
-                                <span>Salin</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const msg = `Halo Admin *${bimbelName}*, saya ingin konfirmasi pembayaran iuran les atas nama siswa *${matchedStudent.name}* (${matchedStudent.code}) untuk periode *${getMonthNameIndo(selectedMonth)} ${selectedYear}* dengan nominal *${formatRupiah(studentSummary.balanceRemaining)}*.`;
-                            sendWhatsAppDirect(contactPhone, msg);
-                          }}
-                          className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer"
-                        >
-                          <MessageCircle className="w-4 h-4" />
-                          <span>Konfirmasi Pembayaran via WhatsApp</span>
-                        </button>
-                      </div>
-                    )}
                   </div>
                 )}
 
-                {/* 2. If MATCHED PROSPECTIVE STUDENT */}
-                {matchedProspective && (
-                  <div className="bg-white rounded-3xl border border-indigo-200 shadow-sm p-6 sm:p-8 space-y-4">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 font-bold flex items-center justify-center">
-                          <UserPlus className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h4 className="text-base font-black text-slate-900 font-heading">
-                            {matchedProspective.studentName}
-                          </h4>
-                          <p className="text-xs text-slate-500 font-mono">
-                            No. Registrasi: {matchedProspective.registrationNumber}
-                          </p>
-                        </div>
-                      </div>
-
-                      <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-extrabold rounded-full">
-                        Status: {matchedProspective.status}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                      <div>
-                        <span className="text-[11px] text-slate-400 block">Jenjang / Kelas:</span>
-                        <span className="font-bold text-slate-800">
-                          {matchedProspective.gradeDetail} • Tipe {matchedProspective.classType}
-                        </span>
-                      </div>
-
-                      <div>
-                        <span className="text-[11px] text-slate-400 block">Tanggal Mendaftar:</span>
-                        <span className="font-bold text-slate-800">
-                          {formatDateIndo(matchedProspective.registrationDate)}
-                        </span>
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <span className="text-[11px] text-slate-400 block">Mata Pelajaran yang Diminati:</span>
-                        <span className="font-bold text-indigo-700">
-                          {matchedProspective.interestedSubjects.join(', ')}
-                        </span>
-                      </div>
-
-                      {matchedProspective.trialDate && (
-                        <div className="sm:col-span-2 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
-                          <span className="text-[11px] text-indigo-800 font-bold block">
-                            📅 Jadwal Sesi Trial Belajar:
-                          </span>
-                          <span className="text-xs font-black text-indigo-950">
-                            {formatDateIndo(matchedProspective.trialDate)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setReceiptModalProspective(matchedProspective);
-                          setIsReceiptModalOpen(true);
-                        }}
-                        className="flex-1 py-2.5 px-4 bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-800 font-bold rounded-xl text-xs flex items-center justify-center gap-2 border border-indigo-200 transition cursor-pointer"
-                      >
-                        <Printer className="w-4 h-4 text-indigo-600" />
-                        <span>Cetak Bukti Pendaftaran</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleSendWAConfirmation(matchedProspective)}
-                        className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        <span>Hubungi Admin via WA</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* 3. If NOT FOUND */}
-                {!matchedStudent && !matchedProspective && (
+                {/* CASE C: IF NOT FOUND */}
+                {!matchedStudent && matchingStudentsList.length === 0 && (
                   <div className="p-8 bg-white border border-rose-200 rounded-3xl text-center space-y-3">
                     <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
                       <AlertCircle className="w-6 h-6" />
                     </div>
                     <h4 className="text-base font-bold text-slate-900">
-                      Data Tidak Ditemukan
+                      Siswa Tidak Ditemukan
                     </h4>
                     <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                      Pencarian dengan kata kunci “<strong>{searchQuery}</strong>” tidak ditemukan di database siswa aktif maupun pendaftaran PPDB.
+                      Pencarian dengan kata kunci “<strong>{searchQuery}</strong>” tidak ditemukan di database siswa resmi aktif.
                     </p>
                     <button
                       type="button"
                       onClick={() => setActiveTab('ppdb')}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-700 transition"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-700 transition cursor-pointer"
                     >
                       <UserPlus className="w-3.5 h-3.5" />
-                      <span>Daftar Siswa Baru Sekarang</span>
+                      <span>Daftar Siswa Baru (PPDB)</span>
                     </button>
                   </div>
                 )}

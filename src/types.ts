@@ -24,6 +24,9 @@ export interface WhatsAppTemplates {
   partialBilling?: string; // Template Tagihan Cicilan / Bayar Sebagian
   paidBilling?: string; // Template Tagihan Lunas / Terima Kasih
   studentReport?: string; // Template Laporan Presensi & Evaluasi Belajar Siswa
+  ppdbGreeting?: string; // Template Sapaan / Follow Up Pendaftar Baru PPDB & Info Trial
+  ppdbTrial?: string; // Template Konfirmasi Jadwal Sesi Trial Belajar
+  ppdbAccepted?: string; // Template Konfirmasi Diterima Resmi Siswa Baru
 }
 
 export interface BimbelSettings {
@@ -60,12 +63,28 @@ export interface BimbelSettings {
   sidebarFooterNote?: string;
   accentColor?: string; // 'indigo' | 'blue' | 'emerald' | 'violet' | 'rose' | 'amber'
 
+  // 3 Kotak Keunggulan / Pilar Bimbel di Portal Publik
+  programHighlights?: {
+    id?: string;
+    title: string;
+    description: string;
+    iconType?: string;
+  }[];
+
   // Pengaturan Dokumen & Bukti Pendaftaran PPDB
   ppdbDocSubtitle?: string; // Subtitle dokumen bukti registrasi
   ppdbTermsTitle?: string; // Judul bagian ketentuan (default: "KETENTUAN & PETUNJUK PENDAFTARAN:")
   ppdbTerms?: string[]; // Butir-butir ketentuan / petunjuk pendaftaran yang dapat diatur oleh Owner
 
+  // Pengaturan Pilihan Form PPDB (Mapel, Hari, & Waktu Belajar)
+  ppdbAvailableSubjects?: string[]; // Daftar pilihan mata pelajaran yang ditawarkan di form PPDB
+  ppdbAvailableDays?: string[]; // Daftar preferensi hari belajar di form PPDB
+  ppdbAvailableTimeSlots?: string[]; // Daftar preferensi waktu/jam belajar di form PPDB
+
   // Kustomisasi Teks Dashboard & Banner
+  portalBannerBadge?: string; // Teks badge kecil hero banner portal publik
+  portalBannerTitle?: string; // Judul utama hero banner portal publik
+  portalBannerSubtitle?: string; // Subtitle / deskripsi hero banner portal publik
   ownerDashboardBadge?: string;
   ownerDashboardTitle?: string;
   ownerDashboardMessage?: string;

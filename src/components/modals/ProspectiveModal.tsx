@@ -43,32 +43,56 @@ export const ProspectiveModal: React.FC<ProspectiveModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const AVAILABLE_DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+  const AVAILABLE_DAYS = (settings?.ppdbAvailableDays && settings.ppdbAvailableDays.length > 0)
+    ? settings.ppdbAvailableDays
+    : ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+
   const DAY_PRESETS = [
     { label: 'Senin & Rabu', days: ['Senin', 'Rabu'] },
     { label: 'Selasa & Kamis', days: ['Selasa', 'Kamis'] },
     { label: 'Senin, Rabu, Jumat', days: ['Senin', 'Rabu', 'Jumat'] },
     { label: 'Selasa, Kamis, Sabtu', days: ['Selasa', 'Kamis', 'Sabtu'] },
     { label: 'Weekend', days: ['Sabtu', 'Minggu'] },
-  ];
-  const TIME_SLOTS = [
-    { id: 'pagi', label: 'Pagi (08:00 - 10:00 WIB)', icon: '☀️' },
-    { id: 'siang', label: 'Siang (13:00 - 15:00 WIB)', icon: '🌤️' },
-    { id: 'sore1', label: 'Sore 1 (15:30 - 17:00 WIB)', icon: '🌅' },
-    { id: 'sore2', label: 'Sore 2 (16:00 - 17:30 WIB)', icon: '🌆' },
-    { id: 'malam', label: 'Malam (18:30 - 20:00 WIB)', icon: '🌙' },
-    { id: 'fleksibel', label: 'Fleksibel', icon: '🕒' },
-  ];
+  ].filter(preset => preset.days.every(d => AVAILABLE_DAYS.includes(d)));
 
-  const COMMON_SUBJECT_PRESETS = [
-    'Matematika',
-    'IPA',
-    'Bahasa Inggris',
-    'Bahasa Indonesia',
-    'IPS / PKn',
-    'Calistung (Baca, Tulis, Hitung)',
-    'Semua Mapel',
-  ];
+  const rawTimeSlots = (settings?.ppdbAvailableTimeSlots && settings.ppdbAvailableTimeSlots.length > 0)
+    ? settings.ppdbAvailableTimeSlots
+    : [
+        'Pagi (08:00 - 10:00 WIB)',
+        'Siang (13:00 - 15:00 WIB)',
+        'Sore 1 (15:30 - 17:00 WIB)',
+        'Sore 2 (16:00 - 17:30 WIB)',
+        'Malam (18:30 - 20:00 WIB)',
+        'Fleksibel',
+      ];
+
+  const TIME_SLOTS = rawTimeSlots.map((slot, idx) => {
+    let icon = '🕒';
+    const lower = slot.toLowerCase();
+    if (lower.includes('pagi')) icon = '☀️';
+    else if (lower.includes('siang')) icon = '🌤️';
+    else if (lower.includes('sore 1') || lower.includes('15:')) icon = '🌅';
+    else if (lower.includes('sore') || lower.includes('16:')) icon = '🌆';
+    else if (lower.includes('malam') || lower.includes('18:') || lower.includes('19:')) icon = '🌙';
+    else if (lower.includes('fleksibel')) icon = '🕒';
+    return {
+      id: `slot-${idx}`,
+      label: slot,
+      icon,
+    };
+  });
+
+  const COMMON_SUBJECT_PRESETS = (settings?.ppdbAvailableSubjects && settings.ppdbAvailableSubjects.length > 0)
+    ? settings.ppdbAvailableSubjects
+    : [
+        'Matematika',
+        'IPA',
+        'Bahasa Inggris',
+        'Bahasa Indonesia',
+        'IPS / PKn',
+        'Calistung (Baca, Tulis, Hitung)',
+        'Semua Mapel',
+      ];
 
   const [studentName, setStudentName] = useState(initialData?.studentName || '');
   const [nickname, setNickname] = useState(initialData?.nickname || '');

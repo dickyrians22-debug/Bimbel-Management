@@ -49,6 +49,9 @@ import {
   RefreshCw,
   Lock,
   FileText,
+  BookOpen,
+  Calendar,
+  Clock,
 } from 'lucide-react';
 import {
   UserAccount,
@@ -67,6 +70,7 @@ import {
   isSystemExpenseCategory,
   isSystemIncomeCategory,
   sortUsersByRole,
+  DEFAULT_PROGRAM_HIGHLIGHTS,
 } from '../../utils/storage';
 import {
   DEFAULT_WA_TEMPLATES,
@@ -183,6 +187,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     sidebarFooterTagline: settings.sidebarFooterTagline || '“Belajar Sampai Paham”',
     sidebarFooterNote: settings.sidebarFooterNote || 'Data tersimpan aman di LocalStorage browser',
     accentColor: settings.accentColor || 'indigo',
+    portalBannerBadge: settings.portalBannerBadge || 'Pusat Layanan Terpadu Siswa & Calon Siswa Bimbel',
+    portalBannerTitle: settings.portalBannerTitle || '',
+    portalBannerSubtitle: settings.portalBannerSubtitle || 'Daftarkan ananda secara online, pantau presensi dan tanggal kehadiran harian, serta cek status iuran les secara transparan kapan saja.',
     ownerDashboardBadge: settings.ownerDashboardBadge || 'Executive Dashboard (Owner Access)',
     ownerDashboardTitle: settings.ownerDashboardTitle || '',
     ownerDashboardMessage: settings.ownerDashboardMessage || 'Pantau metrik finansial, absensi digital real-time, dan pembukuan tahunan dalam satu pintu.',
@@ -195,7 +202,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     loginWelcomeMessage: settings.loginWelcomeMessage || 'Sistem Manajemen & Presensi Digital Bimbel Terintegrasi',
   });
   const [appearanceSavedToast, setAppearanceSavedToast] = useState(false);
-  const [previewRole, setPreviewRole] = useState<'owner' | 'tutor' | 'siswa'>('owner');
+  const [previewRole, setPreviewRole] = useState<'owner' | 'tutor' | 'siswa' | 'portal'>('portal');
 
   // WhatsApp Templates state
   const [whatsappForm, setWhatsappForm] = useState<WhatsAppTemplates>({
@@ -203,17 +210,49 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     partialBilling: settings.whatsappTemplates?.partialBilling || DEFAULT_WA_TEMPLATES.partialBilling,
     paidBilling: settings.whatsappTemplates?.paidBilling || DEFAULT_WA_TEMPLATES.paidBilling,
     studentReport: settings.whatsappTemplates?.studentReport || DEFAULT_WA_TEMPLATES.studentReport,
+    ppdbGreeting: settings.whatsappTemplates?.ppdbGreeting || DEFAULT_WA_TEMPLATES.ppdbGreeting,
+    ppdbTrial: settings.whatsappTemplates?.ppdbTrial || DEFAULT_WA_TEMPLATES.ppdbTrial,
+    ppdbAccepted: settings.whatsappTemplates?.ppdbAccepted || DEFAULT_WA_TEMPLATES.ppdbAccepted,
   });
   const [whatsappSavedToast, setWhatsappSavedToast] = useState(false);
-  const [activeTemplateType, setActiveTemplateType] = useState<'unpaid' | 'partial' | 'paid' | 'report'>('unpaid');
+  const [activeTemplateType, setActiveTemplateType] = useState<
+    'unpaid' | 'partial' | 'paid' | 'report' | 'ppdbGreeting' | 'ppdbTrial' | 'ppdbAccepted'
+  >('unpaid');
   const [testPhoneNumber, setTestPhoneNumber] = useState(settings.phone || '081234567890');
   const [copiedTemplate, setCopiedTemplate] = useState(false);
+  const [varCategoryFilter, setVarCategoryFilter] = useState<'all' | 'ppdb' | 'student' | 'billing' | 'bimbel'>('all');
 
   // PPDB Terms & Document Settings state
+  const DEFAULT_PPDB_SUBJECTS = [
+    'Matematika',
+    'IPA',
+    'Bahasa Inggris',
+    'Bahasa Indonesia',
+    'IPS / PKn',
+    'Calistung (Baca, Tulis, Hitung)',
+    'Persiapan Ujian Sekolah',
+    'Persiapan SNBT / UTBK',
+    'Semua Mapel (All-in-One)',
+  ];
+
+  const DEFAULT_PPDB_DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+
+  const DEFAULT_PPDB_TIME_SLOTS = [
+    'Pagi (08:00 - 10:00 WIB)',
+    'Siang (13:00 - 15:00 WIB)',
+    'Sore 1 (15:30 - 17:00 WIB)',
+    'Sore 2 (16:00 - 17:30 WIB)',
+    'Malam (18:30 - 20:00 WIB)',
+    'Fleksibel / Menyesuaikan',
+  ];
+
   const [ppdbForm, setPpdbForm] = useState<{
     ppdbDocSubtitle: string;
     ppdbTermsTitle: string;
     ppdbTerms: string[];
+    ppdbAvailableSubjects: string[];
+    ppdbAvailableDays: string[];
+    ppdbAvailableTimeSlots: string[];
   }>({
     ppdbDocSubtitle:
       settings.ppdbDocSubtitle ||
@@ -228,11 +267,38 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             'Penyelesaian administrasi pendaftaran & SPP dilakukan sebelum sesi pembelajaran pertama dimulai.',
             'Siswa yang telah terdaftar resmi akan mendapatkan akses mandiri ke Portal Siswa untuk memantau absensi dan materi belajar.',
           ],
+    ppdbAvailableSubjects:
+      settings.ppdbAvailableSubjects && settings.ppdbAvailableSubjects.length > 0
+        ? settings.ppdbAvailableSubjects
+        : DEFAULT_PPDB_SUBJECTS,
+    ppdbAvailableDays:
+      settings.ppdbAvailableDays && settings.ppdbAvailableDays.length > 0
+        ? settings.ppdbAvailableDays
+        : DEFAULT_PPDB_DAYS,
+    ppdbAvailableTimeSlots:
+      settings.ppdbAvailableTimeSlots && settings.ppdbAvailableTimeSlots.length > 0
+        ? settings.ppdbAvailableTimeSlots
+        : DEFAULT_PPDB_TIME_SLOTS,
   });
   const [ppdbSavedToast, setPpdbSavedToast] = useState(false);
   const [newPpdbTerm, setNewPpdbTerm] = useState('');
   const [editingTermIndex, setEditingTermIndex] = useState<number | null>(null);
   const [editingTermText, setEditingTermText] = useState('');
+
+  // PPDB Subjects management state
+  const [newPpdbSubject, setNewPpdbSubject] = useState('');
+  const [editingSubjectIndex, setEditingSubjectIndex] = useState<number | null>(null);
+  const [editingSubjectText, setEditingSubjectText] = useState('');
+
+  // PPDB Days management state
+  const [newPpdbDay, setNewPpdbDay] = useState('');
+  const [editingDayIndex, setEditingDayIndex] = useState<number | null>(null);
+  const [editingDayText, setEditingDayText] = useState('');
+
+  // PPDB Time slots management state
+  const [newPpdbTimeSlot, setNewPpdbTimeSlot] = useState('');
+  const [editingTimeSlotIndex, setEditingTimeSlotIndex] = useState<number | null>(null);
+  const [editingTimeSlotText, setEditingTimeSlotText] = useState('');
 
   // In-App Confirmation & Notice Dialog states (Iframe-Safe)
   const [isResetFactoryModalOpen, setIsResetFactoryModalOpen] = useState(false);
@@ -307,6 +373,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       partialBilling: settings.whatsappTemplates?.partialBilling || DEFAULT_WA_TEMPLATES.partialBilling,
       paidBilling: settings.whatsappTemplates?.paidBilling || DEFAULT_WA_TEMPLATES.paidBilling,
       studentReport: settings.whatsappTemplates?.studentReport || DEFAULT_WA_TEMPLATES.studentReport,
+      ppdbGreeting: settings.whatsappTemplates?.ppdbGreeting || DEFAULT_WA_TEMPLATES.ppdbGreeting,
+      ppdbTrial: settings.whatsappTemplates?.ppdbTrial || DEFAULT_WA_TEMPLATES.ppdbTrial,
+      ppdbAccepted: settings.whatsappTemplates?.ppdbAccepted || DEFAULT_WA_TEMPLATES.ppdbAccepted,
     });
     setPpdbForm({
       ppdbDocSubtitle:
@@ -322,17 +391,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               'Penyelesaian administrasi pendaftaran & SPP dilakukan sebelum sesi pembelajaran pertama dimulai.',
               'Siswa yang telah terdaftar resmi akan mendapatkan akses mandiri ke Portal Siswa untuk memantau absensi dan materi belajar.',
             ],
+      ppdbAvailableSubjects:
+        settings.ppdbAvailableSubjects && settings.ppdbAvailableSubjects.length > 0
+          ? settings.ppdbAvailableSubjects
+          : DEFAULT_PPDB_SUBJECTS,
+      ppdbAvailableDays:
+        settings.ppdbAvailableDays && settings.ppdbAvailableDays.length > 0
+          ? settings.ppdbAvailableDays
+          : DEFAULT_PPDB_DAYS,
+      ppdbAvailableTimeSlots:
+        settings.ppdbAvailableTimeSlots && settings.ppdbAvailableTimeSlots.length > 0
+          ? settings.ppdbAvailableTimeSlots
+          : DEFAULT_PPDB_TIME_SLOTS,
     });
   }, [settings]);
 
-  // Handle Save PPDB Document Settings
-  const handleSavePpdbSettings = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Handle Save All PPDB Settings
+  const handleSavePpdbSettings = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     const updated: BimbelSettings = {
       ...settings,
       ppdbDocSubtitle: ppdbForm.ppdbDocSubtitle.trim(),
       ppdbTermsTitle: ppdbForm.ppdbTermsTitle.trim(),
       ppdbTerms: ppdbForm.ppdbTerms,
+      ppdbAvailableSubjects: ppdbForm.ppdbAvailableSubjects,
+      ppdbAvailableDays: ppdbForm.ppdbAvailableDays,
+      ppdbAvailableTimeSlots: ppdbForm.ppdbAvailableTimeSlots,
     };
     onSaveSettings(updated);
     setPpdbSavedToast(true);
@@ -358,10 +442,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           ppdbTermsTitle: 'KETENTUAN & PETUNJUK PENDAFTARAN:',
           ppdbTerms: defaultTerms,
         };
-        setPpdbForm(resetData);
+        setPpdbForm((prev) => ({
+          ...prev,
+          ...resetData,
+        }));
         const updated: BimbelSettings = {
           ...settings,
           ...resetData,
+          ppdbAvailableSubjects: ppdbForm.ppdbAvailableSubjects,
+          ppdbAvailableDays: ppdbForm.ppdbAvailableDays,
+          ppdbAvailableTimeSlots: ppdbForm.ppdbAvailableTimeSlots,
         };
         onSaveSettings(updated);
         setPpdbSavedToast(true);
@@ -370,44 +460,282 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     });
   };
 
+  // --- Handlers: PPDB Subjects ---
+  const handleAddPpdbSubject = (e: React.FormEvent) => {
+    e.preventDefault();
+    const item = newPpdbSubject.trim();
+    if (!item) return;
+    if (ppdbForm.ppdbAvailableSubjects.includes(item)) {
+      setNoticeModal({
+        isOpen: true,
+        title: 'Mata Pelajaran Sudah Ada',
+        message: `Mata pelajaran "${item}" sudah terdaftar di daftar pilihan PPDB.`,
+        type: 'warning',
+      });
+      return;
+    }
+    const updated = [...ppdbForm.ppdbAvailableSubjects, item];
+    setPpdbForm((prev) => ({ ...prev, ppdbAvailableSubjects: updated }));
+    setNewPpdbSubject('');
+    onSaveSettings({ ...settings, ppdbAvailableSubjects: updated });
+    setPpdbSavedToast(true);
+    setTimeout(() => setPpdbSavedToast(false), 3000);
+  };
+
+  const handleDeletePpdbSubject = (index: number) => {
+    const item = ppdbForm.ppdbAvailableSubjects[index];
+    setDeleteDialog({
+      isOpen: true,
+      title: 'Hapus Mata Pelajaran PPDB',
+      message: `Hapus mata pelajaran "${item}" dari daftar pilihan di form PPDB?`,
+      itemName: item,
+      onConfirm: () => {
+        const updated = ppdbForm.ppdbAvailableSubjects.filter((_, i) => i !== index);
+        setPpdbForm((prev) => ({ ...prev, ppdbAvailableSubjects: updated }));
+        onSaveSettings({ ...settings, ppdbAvailableSubjects: updated });
+      },
+    });
+  };
+
+  const handleSaveEditedPpdbSubject = (index: number) => {
+    if (!editingSubjectText.trim()) return;
+    const updated = ppdbForm.ppdbAvailableSubjects.map((s, i) =>
+      i === index ? editingSubjectText.trim() : s
+    );
+    setPpdbForm((prev) => ({ ...prev, ppdbAvailableSubjects: updated }));
+    setEditingSubjectIndex(null);
+    setEditingSubjectText('');
+    onSaveSettings({ ...settings, ppdbAvailableSubjects: updated });
+    setPpdbSavedToast(true);
+    setTimeout(() => setPpdbSavedToast(false), 3000);
+  };
+
+  const handleMovePpdbSubject = (index: number, direction: 'up' | 'down') => {
+    const copy = [...ppdbForm.ppdbAvailableSubjects];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= copy.length) return;
+    const temp = copy[index];
+    copy[index] = copy[targetIndex];
+    copy[targetIndex] = temp;
+    setPpdbForm((prev) => ({ ...prev, ppdbAvailableSubjects: copy }));
+    onSaveSettings({ ...settings, ppdbAvailableSubjects: copy });
+  };
+
+  const handleResetSubjectsDefault = () => {
+    setDeleteDialog({
+      isOpen: true,
+      title: 'Reset Pilihan Mapel PPDB',
+      message: 'Kembalikan daftar mata pelajaran PPDB ke daftar default standar bimbel?',
+      itemName: 'Daftar Mapel PPDB',
+      onConfirm: () => {
+        setPpdbForm((prev) => ({ ...prev, ppdbAvailableSubjects: DEFAULT_PPDB_SUBJECTS }));
+        onSaveSettings({ ...settings, ppdbAvailableSubjects: DEFAULT_PPDB_SUBJECTS });
+        setPpdbSavedToast(true);
+        setTimeout(() => setPpdbSavedToast(false), 3000);
+      },
+    });
+  };
+
+  // --- Handlers: PPDB Days ---
+  const handleAddPpdbDay = (e: React.FormEvent) => {
+    e.preventDefault();
+    const item = newPpdbDay.trim();
+    if (!item) return;
+    if (ppdbForm.ppdbAvailableDays.includes(item)) {
+      setNoticeModal({
+        isOpen: true,
+        title: 'Hari Sudah Ada',
+        message: `Pilihan hari "${item}" sudah ada di daftar preferensi hari PPDB.`,
+        type: 'warning',
+      });
+      return;
+    }
+    const updated = [...ppdbForm.ppdbAvailableDays, item];
+    setPpdbForm((prev) => ({ ...prev, ppdbAvailableDays: updated }));
+    setNewPpdbDay('');
+    onSaveSettings({ ...settings, ppdbAvailableDays: updated });
+    setPpdbSavedToast(true);
+    setTimeout(() => setPpdbSavedToast(false), 3000);
+  };
+
+  const handleDeletePpdbDay = (index: number) => {
+    const item = ppdbForm.ppdbAvailableDays[index];
+    setDeleteDialog({
+      isOpen: true,
+      title: 'Hapus Hari PPDB',
+      message: `Hapus hari "${item}" dari daftar preferensi hari di form PPDB?`,
+      itemName: item,
+      onConfirm: () => {
+        const updated = ppdbForm.ppdbAvailableDays.filter((_, i) => i !== index);
+        setPpdbForm((prev) => ({ ...prev, ppdbAvailableDays: updated }));
+        onSaveSettings({ ...settings, ppdbAvailableDays: updated });
+      },
+    });
+  };
+
+  const handleSaveEditedPpdbDay = (index: number) => {
+    if (!editingDayText.trim()) return;
+    const updated = ppdbForm.ppdbAvailableDays.map((d, i) =>
+      i === index ? editingDayText.trim() : d
+    );
+    setPpdbForm((prev) => ({ ...prev, ppdbAvailableDays: updated }));
+    setEditingDayIndex(null);
+    setEditingDayText('');
+    onSaveSettings({ ...settings, ppdbAvailableDays: updated });
+    setPpdbSavedToast(true);
+    setTimeout(() => setPpdbSavedToast(false), 3000);
+  };
+
+  const handleMovePpdbDay = (index: number, direction: 'up' | 'down') => {
+    const copy = [...ppdbForm.ppdbAvailableDays];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= copy.length) return;
+    const temp = copy[index];
+    copy[index] = copy[targetIndex];
+    copy[targetIndex] = temp;
+    setPpdbForm((prev) => ({ ...prev, ppdbAvailableDays: copy }));
+    onSaveSettings({ ...settings, ppdbAvailableDays: copy });
+  };
+
+  const handleResetDaysDefault = () => {
+    setDeleteDialog({
+      isOpen: true,
+      title: 'Reset Pilihan Hari PPDB',
+      message: 'Kembalikan daftar hari preferensi PPDB ke Senin - Minggu?',
+      itemName: 'Daftar Hari PPDB',
+      onConfirm: () => {
+        setPpdbForm((prev) => ({ ...prev, ppdbAvailableDays: DEFAULT_PPDB_DAYS }));
+        onSaveSettings({ ...settings, ppdbAvailableDays: DEFAULT_PPDB_DAYS });
+        setPpdbSavedToast(true);
+        setTimeout(() => setPpdbSavedToast(false), 3000);
+      },
+    });
+  };
+
+  // --- Handlers: PPDB Time Slots ---
+  const handleAddPpdbTimeSlot = (e: React.FormEvent) => {
+    e.preventDefault();
+    const item = newPpdbTimeSlot.trim();
+    if (!item) return;
+    if (ppdbForm.ppdbAvailableTimeSlots.includes(item)) {
+      setNoticeModal({
+        isOpen: true,
+        title: 'Sesi Waktu Sudah Ada',
+        message: `Sesi waktu "${item}" sudah ada di daftar slot waktu PPDB.`,
+        type: 'warning',
+      });
+      return;
+    }
+    const updated = [...ppdbForm.ppdbAvailableTimeSlots, item];
+    setPpdbForm((prev) => ({ ...prev, ppdbAvailableTimeSlots: updated }));
+    setNewPpdbTimeSlot('');
+    onSaveSettings({ ...settings, ppdbAvailableTimeSlots: updated });
+    setPpdbSavedToast(true);
+    setTimeout(() => setPpdbSavedToast(false), 3000);
+  };
+
+  const handleDeletePpdbTimeSlot = (index: number) => {
+    const item = ppdbForm.ppdbAvailableTimeSlots[index];
+    setDeleteDialog({
+      isOpen: true,
+      title: 'Hapus Sesi Waktu PPDB',
+      message: `Hapus sesi/jam "${item}" dari daftar preferensi waktu di form PPDB?`,
+      itemName: item,
+      onConfirm: () => {
+        const updated = ppdbForm.ppdbAvailableTimeSlots.filter((_, i) => i !== index);
+        setPpdbForm((prev) => ({ ...prev, ppdbAvailableTimeSlots: updated }));
+        onSaveSettings({ ...settings, ppdbAvailableTimeSlots: updated });
+      },
+    });
+  };
+
+  const handleSaveEditedPpdbTimeSlot = (index: number) => {
+    if (!editingTimeSlotText.trim()) return;
+    const updated = ppdbForm.ppdbAvailableTimeSlots.map((t, i) =>
+      i === index ? editingTimeSlotText.trim() : t
+    );
+    setPpdbForm((prev) => ({ ...prev, ppdbAvailableTimeSlots: updated }));
+    setEditingTimeSlotIndex(null);
+    setEditingTimeSlotText('');
+    onSaveSettings({ ...settings, ppdbAvailableTimeSlots: updated });
+    setPpdbSavedToast(true);
+    setTimeout(() => setPpdbSavedToast(false), 3000);
+  };
+
+  const handleMovePpdbTimeSlot = (index: number, direction: 'up' | 'down') => {
+    const copy = [...ppdbForm.ppdbAvailableTimeSlots];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= copy.length) return;
+    const temp = copy[index];
+    copy[index] = copy[targetIndex];
+    copy[targetIndex] = temp;
+    setPpdbForm((prev) => ({ ...prev, ppdbAvailableTimeSlots: copy }));
+    onSaveSettings({ ...settings, ppdbAvailableTimeSlots: copy });
+  };
+
+  const handleResetTimeSlotsDefault = () => {
+    setDeleteDialog({
+      isOpen: true,
+      title: 'Reset Pilihan Waktu Belajar PPDB',
+      message: 'Kembalikan daftar sesi waktu belajar PPDB ke pengaturan standar?',
+      itemName: 'Daftar Slot Waktu PPDB',
+      onConfirm: () => {
+        setPpdbForm((prev) => ({ ...prev, ppdbAvailableTimeSlots: DEFAULT_PPDB_TIME_SLOTS }));
+        onSaveSettings({ ...settings, ppdbAvailableTimeSlots: DEFAULT_PPDB_TIME_SLOTS });
+        setPpdbSavedToast(true);
+        setTimeout(() => setPpdbSavedToast(false), 3000);
+      },
+    });
+  };
+
+  // --- Handlers: PPDB Terms ---
   const handleAddPpdbTerm = (e: React.FormEvent) => {
     e.preventDefault();
     const term = newPpdbTerm.trim();
     if (!term) return;
+    const updated = [...ppdbForm.ppdbTerms, term];
     setPpdbForm((prev) => ({
       ...prev,
-      ppdbTerms: [...prev.ppdbTerms, term],
+      ppdbTerms: updated,
     }));
     setNewPpdbTerm('');
+    onSaveSettings({ ...settings, ppdbTerms: updated });
+    setPpdbSavedToast(true);
+    setTimeout(() => setPpdbSavedToast(false), 3000);
   };
 
   const handleDeletePpdbTerm = (index: number) => {
+    const updated = ppdbForm.ppdbTerms.filter((_, i) => i !== index);
     setPpdbForm((prev) => ({
       ...prev,
-      ppdbTerms: prev.ppdbTerms.filter((_, i) => i !== index),
+      ppdbTerms: updated,
     }));
+    onSaveSettings({ ...settings, ppdbTerms: updated });
   };
 
   const handleSaveEditedPpdbTerm = (index: number) => {
     if (!editingTermText.trim()) return;
+    const updated = ppdbForm.ppdbTerms.map((t, i) => (i === index ? editingTermText.trim() : t));
     setPpdbForm((prev) => ({
       ...prev,
-      ppdbTerms: prev.ppdbTerms.map((t, i) => (i === index ? editingTermText.trim() : t)),
+      ppdbTerms: updated,
     }));
     setEditingTermIndex(null);
     setEditingTermText('');
+    onSaveSettings({ ...settings, ppdbTerms: updated });
+    setPpdbSavedToast(true);
+    setTimeout(() => setPpdbSavedToast(false), 3000);
   };
 
   const handleMovePpdbTerm = (index: number, direction: 'up' | 'down') => {
-    setPpdbForm((prev) => {
-      const copy = [...prev.ppdbTerms];
-      const targetIndex = direction === 'up' ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= copy.length) return prev;
-      const temp = copy[index];
-      copy[index] = copy[targetIndex];
-      copy[targetIndex] = temp;
-      return { ...prev, ppdbTerms: copy };
-    });
+    const copy = [...ppdbForm.ppdbTerms];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= copy.length) return;
+    const temp = copy[index];
+    copy[index] = copy[targetIndex];
+    copy[targetIndex] = temp;
+    setPpdbForm((prev) => ({ ...prev, ppdbTerms: copy }));
+    onSaveSettings({ ...settings, ppdbTerms: copy });
   };
 
   // Handle Save Salary Settings
@@ -828,6 +1156,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       sidebarFooterTagline: appearanceForm.sidebarFooterTagline,
       sidebarFooterNote: appearanceForm.sidebarFooterNote,
       accentColor: appearanceForm.accentColor,
+      portalBannerBadge: appearanceForm.portalBannerBadge,
+      portalBannerTitle: appearanceForm.portalBannerTitle,
+      portalBannerSubtitle: appearanceForm.portalBannerSubtitle,
       ownerDashboardBadge: appearanceForm.ownerDashboardBadge,
       ownerDashboardTitle: appearanceForm.ownerDashboardTitle,
       ownerDashboardMessage: appearanceForm.ownerDashboardMessage,
@@ -848,7 +1179,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setDeleteDialog({
       isOpen: true,
       title: 'Reset Tampilan & Desain',
-      message: 'Kembalikan teks dashboard, sidebar, navbar, dan desain ke format awal standar pabrik?',
+      message: 'Kembalikan teks dashboard, sidebar, navbar, banner portal publik, dan desain ke format awal standar pabrik?',
       itemName: 'Pengaturan Tampilan Bawaan',
       onConfirm: () => {
         const resetAppearance: BimbelSettings = {
@@ -859,6 +1190,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           sidebarFooterTagline: '“Belajar Sampai Paham”',
           sidebarFooterNote: 'Data tersimpan aman di LocalStorage browser',
           accentColor: 'indigo',
+          portalBannerBadge: 'Pusat Layanan Terpadu Siswa & Calon Siswa Bimbel',
+          portalBannerTitle: '',
+          portalBannerSubtitle:
+            'Daftarkan ananda secara online, pantau presensi dan tanggal kehadiran harian, serta cek status iuran les secara transparan kapan saja.',
           ownerDashboardBadge: 'Executive Dashboard (Owner Access)',
           ownerDashboardTitle: '',
           ownerDashboardMessage:
@@ -1014,7 +1349,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           }`}
         >
           <FileText className="w-4 h-4 text-indigo-500" />
-          <span>Ketentuan &amp; Bukti PPDB</span>
+          <span>Formulir &amp; Bukti PPDB</span>
         </button>
 
         <button
@@ -2508,6 +2843,92 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
 
+            {/* 3 KOTAK KEUNGGULAN / PILAR BIMBEL DI PORTAL PUBLIK */}
+            <div className="pt-5 border-t border-slate-200 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 font-heading">
+                    <Sparkles className="w-4 h-4 text-indigo-600" />
+                    <span>3 Kotak Keunggulan / Pilar di Portal Publik</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Ubah judul &amp; deskripsi 3 kotak keunggulan yang tampil pada tab Info Program di Portal Publik.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setProfileForm({
+                      ...profileForm,
+                      programHighlights: DEFAULT_PROGRAM_HIGHLIGHTS,
+                    })
+                  }
+                  className="text-xs text-indigo-600 hover:text-indigo-800 font-bold hover:underline self-start sm:self-auto cursor-pointer"
+                >
+                  Reset ke Standar
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                {(profileForm.programHighlights && profileForm.programHighlights.length === 3
+                  ? profileForm.programHighlights
+                  : DEFAULT_PROGRAM_HIGHLIGHTS
+                ).map((item, idx) => (
+                  <div key={idx} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-extrabold rounded-md uppercase tracking-wider">
+                        Kotak #{idx + 1}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        Judul Keunggulan
+                      </label>
+                      <input
+                        type="text"
+                        value={item.title}
+                        onChange={(e) => {
+                          const list = [
+                            ...(profileForm.programHighlights && profileForm.programHighlights.length === 3
+                              ? profileForm.programHighlights
+                              : DEFAULT_PROGRAM_HIGHLIGHTS),
+                          ];
+                          list[idx] = { ...list[idx], title: e.target.value };
+                          setProfileForm({ ...profileForm, programHighlights: list });
+                        }}
+                        placeholder={`Judul keunggulan ${idx + 1}`}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        Deskripsi Singkat
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={item.description}
+                        onChange={(e) => {
+                          const list = [
+                            ...(profileForm.programHighlights && profileForm.programHighlights.length === 3
+                              ? profileForm.programHighlights
+                              : DEFAULT_PROGRAM_HIGHLIGHTS),
+                          ];
+                          list[idx] = { ...list[idx], description: e.target.value };
+                          setProfileForm({ ...profileForm, programHighlights: list });
+                        }}
+                        placeholder={`Deskripsi keunggulan ${idx + 1}`}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-700 focus:ring-2 focus:ring-indigo-500 leading-relaxed"
+                        required
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="pt-4 flex justify-end">
               <button
                 type="submit"
@@ -2522,7 +2943,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       )}
 
       {/* ========================================================= */}
-      {/* SUB-TAB: PENGATURAN KETENTUAN & BUKTI PPDB                */}
+      {/* SUB-TAB: PENGATURAN FORMULIR & BUKTI PPDB                 */}
       {/* ========================================================= */}
       {activeSubTab === 'ppdb-terms' && (
         <div className="space-y-6 animate-in fade-in duration-300">
@@ -2530,7 +2951,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="p-4 bg-emerald-500 text-white rounded-2xl shadow-xl flex items-center gap-3 text-xs font-bold animate-in slide-in-from-top-3">
               <CheckCircle2 className="w-5 h-5 shrink-0" />
               <span>
-                Pengaturan Dokumen &amp; Ketentuan PPDB berhasil disimpan! Format baru akan langsung diterapkan pada Bukti Registrasi Cetak (A4) &amp; Download PNG.
+                Pengaturan Formulir PPDB (Mapel, Hari, Waktu Belajar) &amp; Ketentuan Bukti Pendaftaran berhasil disimpan ke database!
               </span>
             </div>
           )}
@@ -2540,37 +2961,451 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="space-y-1.5">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-extrabold uppercase tracking-wider">
                 <FileText className="w-3.5 h-3.5 text-indigo-600" />
-                Kustomisasi Format Bukti Pendaftaran PPDB
+                Konfigurasi Lengkap Formulir &amp; Bukti PPDB
               </div>
               <h3 className="text-base sm:text-lg font-bold text-slate-900 font-heading">
-                Ketentuan &amp; Petunjuk Pendaftaran Siswa Baru
+                Pengaturan Pilihan Formulir PPDB &amp; Ketentuan Bukti Pendaftaran
               </h3>
               <p className="text-xs text-slate-500 max-w-2xl leading-relaxed">
-                Atur judul dokumen, subjudul, serta butir-butir aturan/petunjuk pendaftaran yang tercetak pada lembar <strong>Bukti Registrasi PPDB</strong>. Anda bebas menghapus atau menambahkan ketentuan sesuai kebijakan bimbel Anda (tanpa trial gratis jika tidak ada).
+                Sesuaikan daftar mata pelajaran yang ditawarkan, preferensi hari &amp; waktu/jam belajar di Formulir Pendaftaran PPDB Publik / Admin, serta atur butir ketentuan cetak pada lembar <strong>Bukti Registrasi PPDB</strong>.
               </p>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
-                onClick={handleResetPpdbDefaults}
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer border border-slate-200"
-                title="Kembalikan semua ketentuan ke teks standar bawaan sistem"
+                onClick={() => handleSavePpdbSettings()}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-indigo-600/20"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset Standar</span>
+                <Save className="w-4 h-4" />
+                <span>Simpan Semua Pengaturan</span>
               </button>
             </div>
           </div>
 
-          {/* Main 2-Column Grid: Form Editor (Left) & Real-Time Document Preview (Right) */}
+          {/* Section 1: Pilihan Mata Pelajaran PPDB */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+              <div>
+                <h4 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider font-heading flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-indigo-600" />
+                  <span>1. Pilihan Mata Pelajaran (Mapel Minat) di Form PPDB</span>
+                </h4>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Daftar mapel ini akan muncul sebagai tombol pilihan / checkbox pada formulir pendaftaran siswa baru.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-full">
+                  {ppdbForm.ppdbAvailableSubjects.length} Mata Pelajaran
+                </span>
+                <button
+                  type="button"
+                  onClick={handleResetSubjectsDefault}
+                  className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-lg border border-slate-200 transition cursor-pointer flex items-center gap-1"
+                  title="Reset ke daftar mapel standar"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Reset Default</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Add Subject Input */}
+            <form onSubmit={handleAddPpdbSubject} className="flex gap-2">
+              <input
+                type="text"
+                value={newPpdbSubject}
+                onChange={(e) => setNewPpdbSubject(e.target.value)}
+                placeholder="Tambah nama mata pelajaran baru (contoh: Bahasa Jepang, Robotik, Kimia SMA)..."
+                className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500"
+              />
+              <button
+                type="submit"
+                disabled={!newPpdbSubject.trim()}
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tambah Mapel</span>
+              </button>
+            </form>
+
+            {/* List of Subjects */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-2">
+              {ppdbForm.ppdbAvailableSubjects.map((subj, index) => (
+                <div
+                  key={index}
+                  className="p-3 bg-slate-50 hover:bg-indigo-50/50 rounded-xl border border-slate-200 transition flex items-center justify-between gap-2 group"
+                >
+                  {editingSubjectIndex === index ? (
+                    <div className="flex items-center gap-1 flex-1">
+                      <input
+                        type="text"
+                        value={editingSubjectText}
+                        onChange={(e) => setEditingSubjectText(e.target.value)}
+                        className="flex-1 px-2 py-1 bg-white border border-indigo-500 rounded-lg text-xs font-bold text-slate-900"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveEditedPpdbSubject(index)}
+                        className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingSubjectIndex(null);
+                          setEditingSubjectText('');
+                        }}
+                        className="p-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="w-5 h-5 rounded-md bg-indigo-100 text-indigo-800 text-[11px] font-bold flex items-center justify-center shrink-0">
+                          {index + 1}
+                        </span>
+                        <span className="text-xs font-bold text-slate-800 truncate" title={subj}>
+                          {subj}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-0.5 opacity-80 group-hover:opacity-100 transition shrink-0">
+                        <button
+                          type="button"
+                          disabled={index === 0}
+                          onClick={() => handleMovePpdbSubject(index, 'up')}
+                          className="p-1 text-slate-400 hover:text-slate-800 disabled:opacity-20 rounded"
+                          title="Pindah ke kiri / atas"
+                        >
+                          ←
+                        </button>
+                        <button
+                          type="button"
+                          disabled={index === ppdbForm.ppdbAvailableSubjects.length - 1}
+                          onClick={() => handleMovePpdbSubject(index, 'down')}
+                          className="p-1 text-slate-400 hover:text-slate-800 disabled:opacity-20 rounded"
+                          title="Pindah ke kanan / bawah"
+                        >
+                          →
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingSubjectIndex(index);
+                            setEditingSubjectText(subj);
+                          }}
+                          className="p-1 text-slate-400 hover:text-amber-600 rounded"
+                          title="Edit nama mapel"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePpdbSubject(index)}
+                          className="p-1 text-slate-400 hover:text-rose-600 rounded"
+                          title="Hapus mapel ini"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+            {ppdbForm.ppdbAvailableSubjects.length === 0 && (
+              <div className="p-4 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-xs">
+                Belum ada mata pelajaran. Silakan tambahkan minimal 1 mata pelajaran.
+              </div>
+            )}
+          </div>
+
+          {/* Section 2 & 3 Grid: Preferensi Hari & Waktu Belajar */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Section 2: Preferensi Hari Belajar */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div>
+                  <h4 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider font-heading flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-amber-500" />
+                    <span>2. Preferensi Hari Belajar</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Daftar hari yang dapat dipilih di formulir PPDB
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold rounded-full">
+                    {ppdbForm.ppdbAvailableDays.length} Hari
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleResetDaysDefault}
+                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold rounded-lg border border-slate-200 transition cursor-pointer"
+                    title="Reset ke Senin - Minggu"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+
+              {/* Add Day Input */}
+              <form onSubmit={handleAddPpdbDay} className="flex gap-2">
+                <input
+                  type="text"
+                  value={newPpdbDay}
+                  onChange={(e) => setNewPpdbDay(e.target.value)}
+                  placeholder="Tambah hari (contoh: Senin, Weekend, Libur)..."
+                  className="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                />
+                <button
+                  type="submit"
+                  disabled={!newPpdbDay.trim()}
+                  className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 text-white font-bold rounded-xl text-xs flex items-center gap-1 transition cursor-pointer shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Tambah</span>
+                </button>
+              </form>
+
+              {/* List of Days */}
+              <div className="space-y-2">
+                {ppdbForm.ppdbAvailableDays.map((day, index) => (
+                  <div
+                    key={index}
+                    className="p-2.5 bg-slate-50 hover:bg-amber-50/40 rounded-xl border border-slate-200 transition flex items-center justify-between gap-2 group"
+                  >
+                    {editingDayIndex === index ? (
+                      <div className="flex items-center gap-1 flex-1">
+                        <input
+                          type="text"
+                          value={editingDayText}
+                          onChange={(e) => setEditingDayText(e.target.value)}
+                          className="flex-1 px-2 py-1 bg-white border border-amber-500 rounded-lg text-xs font-bold text-slate-900"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSaveEditedPpdbDay(index)}
+                          className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingDayIndex(null);
+                            setEditingDayText('');
+                          }}
+                          className="p-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-md bg-amber-100 text-amber-800 text-[11px] font-bold flex items-center justify-center shrink-0">
+                            {index + 1}
+                          </span>
+                          <span className="text-xs font-bold text-slate-800">{day}</span>
+                        </div>
+                        <div className="flex items-center gap-0.5 opacity-80 group-hover:opacity-100 transition shrink-0">
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            onClick={() => handleMovePpdbDay(index, 'up')}
+                            className="p-1 text-slate-400 hover:text-slate-800 disabled:opacity-20 rounded"
+                            title="Pindah ke atas"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index === ppdbForm.ppdbAvailableDays.length - 1}
+                            onClick={() => handleMovePpdbDay(index, 'down')}
+                            className="p-1 text-slate-400 hover:text-slate-800 disabled:opacity-20 rounded"
+                            title="Pindah ke bawah"
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingDayIndex(index);
+                              setEditingDayText(day);
+                            }}
+                            className="p-1 text-slate-400 hover:text-amber-600 rounded"
+                            title="Edit nama hari"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePpdbDay(index)}
+                            className="p-1 text-slate-400 hover:text-rose-600 rounded"
+                            title="Hapus hari ini"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Section 3: Preferensi Sesi / Waktu Belajar */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div>
+                  <h4 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider font-heading flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-emerald-500" />
+                    <span>3. Preferensi Sesi / Waktu Belajar</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Slot jam les yang ditawarkan kepada calon peserta didik
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-full">
+                    {ppdbForm.ppdbAvailableTimeSlots.length} Sesi
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleResetTimeSlotsDefault}
+                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold rounded-lg border border-slate-200 transition cursor-pointer"
+                    title="Reset ke slot waktu standar"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+
+              {/* Add Time Slot Input */}
+              <form onSubmit={handleAddPpdbTimeSlot} className="flex gap-2">
+                <input
+                  type="text"
+                  value={newPpdbTimeSlot}
+                  onChange={(e) => setNewPpdbTimeSlot(e.target.value)}
+                  placeholder="Tambah sesi (contoh: Sore (15:00 - 16:30 WIB))..."
+                  className="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                />
+                <button
+                  type="submit"
+                  disabled={!newPpdbTimeSlot.trim()}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 text-white font-bold rounded-xl text-xs flex items-center gap-1 transition cursor-pointer shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Tambah</span>
+                </button>
+              </form>
+
+              {/* List of Time Slots */}
+              <div className="space-y-2">
+                {ppdbForm.ppdbAvailableTimeSlots.map((slot, index) => (
+                  <div
+                    key={index}
+                    className="p-2.5 bg-slate-50 hover:bg-emerald-50/40 rounded-xl border border-slate-200 transition flex items-center justify-between gap-2 group"
+                  >
+                    {editingTimeSlotIndex === index ? (
+                      <div className="flex items-center gap-1 flex-1">
+                        <input
+                          type="text"
+                          value={editingTimeSlotText}
+                          onChange={(e) => setEditingTimeSlotText(e.target.value)}
+                          className="flex-1 px-2 py-1 bg-white border border-emerald-500 rounded-lg text-xs font-bold text-slate-900"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSaveEditedPpdbTimeSlot(index)}
+                          className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingTimeSlotIndex(null);
+                            setEditingTimeSlotText('');
+                          }}
+                          className="p-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 truncate">
+                          <span className="w-5 h-5 rounded-md bg-emerald-100 text-emerald-800 text-[11px] font-bold flex items-center justify-center shrink-0">
+                            {index + 1}
+                          </span>
+                          <span className="text-xs font-bold text-slate-800 truncate" title={slot}>
+                            {slot}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-0.5 opacity-80 group-hover:opacity-100 transition shrink-0">
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            onClick={() => handleMovePpdbTimeSlot(index, 'up')}
+                            className="p-1 text-slate-400 hover:text-slate-800 disabled:opacity-20 rounded"
+                            title="Pindah ke atas"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index === ppdbForm.ppdbAvailableTimeSlots.length - 1}
+                            onClick={() => handleMovePpdbTimeSlot(index, 'down')}
+                            className="p-1 text-slate-400 hover:text-slate-800 disabled:opacity-20 rounded"
+                            title="Pindah ke bawah"
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingTimeSlotIndex(index);
+                              setEditingTimeSlotText(slot);
+                            }}
+                            className="p-1 text-slate-400 hover:text-amber-600 rounded"
+                            title="Edit nama sesi"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePpdbTimeSlot(index)}
+                            className="p-1 text-slate-400 hover:text-rose-600 rounded"
+                            title="Hapus sesi ini"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Pengaturan Judul & Butir Ketentuan Bukti PPDB */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* LEFT COLUMN: Editor Form (7 Cols) */}
             <div className="lg:col-span-7 space-y-5">
-              <form onSubmit={handleSavePpdbSettings} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5">
-                <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-heading pb-3 border-b border-slate-100 flex items-center gap-2">
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-5">
+                <h4 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider font-heading pb-3 border-b border-slate-100 flex items-center gap-2">
                   <Edit className="w-4 h-4 text-indigo-600" />
-                  <span>1. Pengaturan Judul &amp; Subjudul Dokumen</span>
+                  <span>4. Format Judul &amp; Subjudul Bukti PPDB Cetak</span>
                 </h4>
 
                 <div className="space-y-4">
@@ -2584,7 +3419,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       onChange={(e) => setPpdbForm({ ...ppdbForm, ppdbDocSubtitle: e.target.value })}
                       placeholder="Contoh: Penerimaan Peserta Didik Baru & Registrasi Program Belajar"
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500"
-                      required
                     />
                     <p className="text-[10px] text-slate-400 mt-1">
                       Dicantumkan tepat di bawah teks "BUKTI PENDAFTARAN PESERTA DIDIK BARU".
@@ -2601,168 +3435,147 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       onChange={(e) => setPpdbForm({ ...ppdbForm, ppdbTermsTitle: e.target.value })}
                       placeholder="Contoh: KETENTUAN & PETUNJUK PENDAFTARAN:"
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500 uppercase font-mono"
-                      required
                     />
                   </div>
                 </div>
 
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-md shadow-indigo-600/20"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>Simpan Perubahan Pengaturan PPDB</span>
-                  </button>
-                </div>
-              </form>
-
-              {/* Ketentuan Points List Management */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <div>
-                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-heading flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-amber-500" />
-                      <span>2. Butir-Butir Ketentuan &amp; Petunjuk PPDB</span>
-                    </h4>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      Kelola butir aturan yang akan tampil sebagai poin bernomor
-                    </p>
+                {/* Butir-Butir Ketentuan */}
+                <div className="pt-3 border-t border-slate-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider font-heading flex items-center gap-2">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Butir-Butir Ketentuan / Aturan Pendaftaran</span>
+                      </h5>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Akan dicetak sebagai butir aturan bernomor pada lembar bukti PPDB
+                      </p>
+                    </div>
+                    <span className="px-2.5 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-full">
+                      {ppdbForm.ppdbTerms.length} Butir
+                    </span>
                   </div>
-                  <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-full">
-                    {ppdbForm.ppdbTerms.length} Butir
-                  </span>
-                </div>
 
-                {/* Form Tambah Butir Ketentuan Baru */}
-                <form onSubmit={handleAddPpdbTerm} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newPpdbTerm}
-                    onChange={(e) => setNewPpdbTerm(e.target.value)}
-                    placeholder="Tulis butir ketentuan baru (contoh: Biaya pendaftaran wajib diselesaikan saat daftar)..."
-                    className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!newPpdbTerm.trim()}
-                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Tambah</span>
-                  </button>
-                </form>
-
-                {/* List of current terms */}
-                <div className="space-y-2.5 pt-1">
-                  {ppdbForm.ppdbTerms.map((term, index) => (
-                    <div
-                      key={index}
-                      className="p-3.5 bg-slate-50 hover:bg-indigo-50/40 rounded-xl border border-slate-200 transition flex items-start gap-3 group"
+                  {/* Form Tambah Butir Ketentuan Baru */}
+                  <form onSubmit={handleAddPpdbTerm} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newPpdbTerm}
+                      onChange={(e) => setNewPpdbTerm(e.target.value)}
+                      placeholder="Tulis butir aturan baru..."
+                      className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newPpdbTerm.trim()}
+                      className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
                     >
-                      <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
-                        {index + 1}
-                      </span>
+                      <Plus className="w-4 h-4" />
+                      <span>Tambah</span>
+                    </button>
+                  </form>
 
-                      {editingTermIndex === index ? (
-                        <div className="flex-1 space-y-2">
-                          <textarea
-                            rows={2}
-                            value={editingTermText}
-                            onChange={(e) => setEditingTermText(e.target.value)}
-                            className="w-full p-2 bg-white border border-indigo-400 rounded-lg text-xs font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500"
-                          />
-                          <div className="flex items-center gap-2">
+                  {/* List of current terms */}
+                  <div className="space-y-2.5 pt-1">
+                    {ppdbForm.ppdbTerms.map((term, index) => (
+                      <div
+                        key={index}
+                        className="p-3 bg-slate-50 hover:bg-indigo-50/40 rounded-xl border border-slate-200 transition flex items-start gap-3 group"
+                      >
+                        <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                          {index + 1}
+                        </span>
+
+                        {editingTermIndex === index ? (
+                          <div className="flex-1 space-y-2">
+                            <textarea
+                              rows={2}
+                              value={editingTermText}
+                              onChange={(e) => setEditingTermText(e.target.value)}
+                              className="w-full p-2 bg-white border border-indigo-400 rounded-lg text-xs font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500"
+                            />
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleSaveEditedPpdbTerm(index)}
+                                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg transition cursor-pointer"
+                              >
+                                Simpan
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingTermIndex(null);
+                                  setEditingTermText('');
+                                }}
+                                className="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[11px] font-bold rounded-lg transition cursor-pointer"
+                              >
+                                Batal
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex-1">
+                            <p className="text-xs text-slate-800 font-medium leading-relaxed">
+                              {term}
+                            </p>
+                          </div>
+                        )}
+
+                        {editingTermIndex !== index && (
+                          <div className="flex items-center gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition">
                             <button
                               type="button"
-                              onClick={() => handleSaveEditedPpdbTerm(index)}
-                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg transition cursor-pointer"
+                              disabled={index === 0}
+                              onClick={() => handleMovePpdbTerm(index, 'up')}
+                              className="p-1.5 text-slate-400 hover:text-slate-800 disabled:opacity-30 rounded transition cursor-pointer"
+                              title="Pindah ke Atas"
                             >
-                              Simpan
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              disabled={index === ppdbForm.ppdbTerms.length - 1}
+                              onClick={() => handleMovePpdbTerm(index, 'down')}
+                              className="p-1.5 text-slate-400 hover:text-slate-800 disabled:opacity-30 rounded transition cursor-pointer"
+                              title="Pindah ke Bawah"
+                            >
+                              ↓
                             </button>
                             <button
                               type="button"
                               onClick={() => {
-                                setEditingTermIndex(null);
-                                setEditingTermText('');
+                                setEditingTermIndex(index);
+                                setEditingTermText(term);
                               }}
-                              className="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[11px] font-bold rounded-lg transition cursor-pointer"
+                              className="p-1.5 text-slate-400 hover:text-amber-600 rounded transition cursor-pointer"
+                              title="Edit Butir Ini"
                             >
-                              Batal
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePpdbTerm(index)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 rounded transition cursor-pointer"
+                              title="Hapus Butir Ini"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="flex-1">
-                          <p className="text-xs text-slate-800 font-medium leading-relaxed">
-                            {term}
-                          </p>
-                        </div>
-                      )}
-
-                      {editingTermIndex !== index && (
-                        <div className="flex items-center gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition">
-                          {/* Move Up */}
-                          <button
-                            type="button"
-                            disabled={index === 0}
-                            onClick={() => handleMovePpdbTerm(index, 'up')}
-                            className="p-1.5 text-slate-400 hover:text-slate-800 disabled:opacity-30 rounded transition cursor-pointer"
-                            title="Pindah ke Atas"
-                          >
-                            ↑
-                          </button>
-                          {/* Move Down */}
-                          <button
-                            type="button"
-                            disabled={index === ppdbForm.ppdbTerms.length - 1}
-                            onClick={() => handleMovePpdbTerm(index, 'down')}
-                            className="p-1.5 text-slate-400 hover:text-slate-800 disabled:opacity-30 rounded transition cursor-pointer"
-                            title="Pindah ke Bawah"
-                          >
-                            ↓
-                          </button>
-                          {/* Edit */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingTermIndex(index);
-                              setEditingTermText(term);
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-amber-600 rounded transition cursor-pointer"
-                            title="Edit Butir Ini"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          {/* Delete */}
-                          <button
-                            type="button"
-                            onClick={() => handleDeletePpdbTerm(index)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded transition cursor-pointer"
-                            title="Hapus Butir Ini"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-
-                  {ppdbForm.ppdbTerms.length === 0 && (
-                    <div className="p-6 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-xs">
-                      Belum ada butir ketentuan yang ditambahkan. Gunakan form di atas untuk menambahkan.
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="pt-3 border-t border-slate-100 flex justify-end">
                   <button
                     type="button"
-                    onClick={(e) => handleSavePpdbSettings(e as any)}
+                    onClick={() => handleSavePpdbSettings()}
                     className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center gap-2 transition cursor-pointer shadow-md shadow-indigo-600/20"
                   >
                     <Save className="w-4 h-4" />
-                    <span>Simpan Seluruh Ketentuan PPDB</span>
+                    <span>Simpan Seluruh Pengaturan PPDB</span>
                   </button>
                 </div>
               </div>
@@ -2857,7 +3670,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {whatsappSavedToast && (
             <div className="p-4 bg-emerald-500 text-white rounded-2xl shadow-xl flex items-center gap-3 text-xs font-bold animate-in slide-in-from-top-3">
               <CheckCircle2 className="w-5 h-5 shrink-0" />
-              <span>Format template pesan WhatsApp berhasil disimpan! Format baru akan langsung otomatis digunakan saat mengirim tagihan dan laporan siswa ke wali murid.</span>
+              <span>Format template pesan WhatsApp berhasil disimpan! Format baru akan langsung otomatis digunakan di seluruh sistem (Tagihan SPP, Laporan Presensi, dan Pengelolaan PPDB).</span>
             </div>
           )}
 
@@ -2866,13 +3679,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="space-y-1.5">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-extrabold uppercase tracking-wider">
                 <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                Kustomisasi Format Teks WhatsApp
+                Pusat Kustomisasi Format WhatsApp
               </div>
               <h3 className="text-base sm:text-lg font-bold text-slate-900 font-heading">
-                Pengaturan Template Pesan WhatsApp ke Wali Murid
+                Pengaturan Format Pesan WhatsApp (SPP, Laporan & PPDB)
               </h3>
               <p className="text-xs text-slate-500 max-w-2xl leading-relaxed">
-                Sesuaikan kata-kata pesan WhatsApp yang dikirimkan ke orang tua siswa untuk penagihan SPP (Belum Bayar, Cicilan/Sebagian, Lunas) serta Laporan Hasil Belajar. Gunakan kode variabel seperti <code className="bg-slate-100 text-emerald-700 px-1 py-0.5 rounded font-mono text-[11px] font-bold">{'{{nama_siswa}}'}</code> atau <code className="bg-slate-100 text-emerald-700 px-1 py-0.5 rounded font-mono text-[11px] font-bold">{'{{total_tagihan}}'}</code> untuk menyisipkan data otomatis.
+                Sesuaikan susunan kata pesan otomatis untuk penagihan SPP siswa, laporan belajar bulanan, serta komunikasi ke calon wali murid PPDB (follow-up pendaftar, info trial belajar, dan pengumuman diterima). Gunakan variabel seperti <code className="bg-slate-100 text-emerald-700 px-1 py-0.5 rounded font-mono text-[11px] font-bold">{'{{nama_siswa}}'}</code> atau <code className="bg-slate-100 text-emerald-700 px-1 py-0.5 rounded font-mono text-[11px] font-bold">{'{{no_registrasi}}'}</code> untuk menyisipkan data secara otomatis.
               </p>
             </div>
 
@@ -2898,103 +3711,199 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
-          {/* Template Category Selector Pills */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <button
-              type="button"
-              onClick={() => setActiveTemplateType('unpaid')}
-              className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
-                activeTemplateType === 'unpaid'
-                  ? 'bg-rose-50/80 border-rose-300 ring-2 ring-rose-500 shadow-sm'
-                  : 'bg-white border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-xs">
-                  💳
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
-                  Tagihan Utama
-                </span>
+          {/* SECTION 1: Template SPP & Laporan Siswa Aktif */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-indigo-600" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  1. Format Pesan SPP & Laporan Siswa Aktif
+                </h4>
               </div>
-              <div>
-                <p className="text-xs font-bold text-slate-900 font-heading">1. Tagihan Belum Bayar</p>
-                <p className="text-[11px] text-slate-500">Pemberitahuan total tagihan & sesi hadir</p>
-              </div>
-            </button>
+              <span className="text-[11px] font-semibold text-slate-400">4 Template</span>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => setActiveTemplateType('partial')}
-              className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
-                activeTemplateType === 'partial'
-                  ? 'bg-amber-50/80 border-amber-300 ring-2 ring-amber-500 shadow-sm'
-                  : 'bg-white border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-xs">
-                  ⏳
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                  Cicilan / Sisa
-                </span>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-900 font-heading">2. Bayar Sebagian</p>
-                <p className="text-[11px] text-slate-500">Informasi sisa kekurangan tagihan</p>
-              </div>
-            </button>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <button
+                type="button"
+                onClick={() => setActiveTemplateType('unpaid')}
+                className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
+                  activeTemplateType === 'unpaid'
+                    ? 'bg-rose-50/90 border-rose-300 ring-2 ring-rose-500 shadow-sm'
+                    : 'bg-white border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-xs">
+                    💳
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
+                    Tagihan Utama
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900 font-heading">Tagihan Belum Bayar</p>
+                  <p className="text-[11px] text-slate-500">Rincian tagihan & kehadiran</p>
+                </div>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTemplateType('paid')}
-              className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
-                activeTemplateType === 'paid'
-                  ? 'bg-emerald-50/80 border-emerald-300 ring-2 ring-emerald-500 shadow-sm'
-                  : 'bg-white border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xs">
-                  ✅
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                  Kwitansi / Lunas
-                </span>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-900 font-heading">3. Konfirmasi Lunas</p>
-                <p className="text-[11px] text-slate-500">Ucapan terima kasih pembayaran lunas</p>
-              </div>
-            </button>
+              <button
+                type="button"
+                onClick={() => setActiveTemplateType('partial')}
+                className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
+                  activeTemplateType === 'partial'
+                    ? 'bg-amber-50/90 border-amber-300 ring-2 ring-amber-500 shadow-sm'
+                    : 'bg-white border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-xs">
+                    ⏳
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                    Cicilan
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900 font-heading">Bayar Sebagian</p>
+                  <p className="text-[11px] text-slate-500">Sisa kekurangan tagihan</p>
+                </div>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTemplateType('report')}
-              className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
-                activeTemplateType === 'report'
-                  ? 'bg-indigo-50/80 border-indigo-300 ring-2 ring-indigo-500 shadow-sm'
-                  : 'bg-white border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs">
-                  📊
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-                  Laporan Siswa
-                </span>
+              <button
+                type="button"
+                onClick={() => setActiveTemplateType('paid')}
+                className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
+                  activeTemplateType === 'paid'
+                    ? 'bg-emerald-50/90 border-emerald-300 ring-2 ring-emerald-500 shadow-sm'
+                    : 'bg-white border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xs">
+                    ✅
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                    Lunas
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900 font-heading">Konfirmasi Lunas</p>
+                  <p className="text-[11px] text-slate-500">Ucapan terima kasih pembayaran</p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTemplateType('report')}
+                className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
+                  activeTemplateType === 'report'
+                    ? 'bg-indigo-50/90 border-indigo-300 ring-2 ring-indigo-500 shadow-sm'
+                    : 'bg-white border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                    📊
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                    Laporan
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900 font-heading">Laporan Presensi</p>
+                  <p className="text-[11px] text-slate-500">Rekap kehadiran & evaluasi</p>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* SECTION 2: Template Penerimaan Peserta Didik Baru (PPDB) */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  2. Format Pesan PPDB & Calon Siswa Baru (Trial & Pengumuman)
+                </h4>
               </div>
-              <div>
-                <p className="text-xs font-bold text-slate-900 font-heading">4. Laporan Presensi Belajar</p>
-                <p className="text-[11px] text-slate-500">Pengantar evaluasi & kehadiran siswa</p>
-              </div>
-            </button>
+              <span className="text-[11px] font-semibold text-slate-400">3 Template</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <button
+                type="button"
+                onClick={() => setActiveTemplateType('ppdbGreeting')}
+                className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
+                  activeTemplateType === 'ppdbGreeting'
+                    ? 'bg-amber-50/90 border-amber-300 ring-2 ring-amber-500 shadow-sm'
+                    : 'bg-white border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-xs">
+                    👋
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                    Pendaftar Baru
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900 font-heading">Follow-up & Info Trial Belajar</p>
+                  <p className="text-[11px] text-slate-500">Sapaan pendaftar, minat mapel, info trial tanpa uang pangkal</p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTemplateType('ppdbTrial')}
+                className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
+                  activeTemplateType === 'ppdbTrial'
+                    ? 'bg-sky-50/90 border-sky-300 ring-2 ring-sky-500 shadow-sm'
+                    : 'bg-white border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="w-8 h-8 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center font-bold text-xs">
+                    📅
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">
+                    Sesi Trial
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900 font-heading">Konfirmasi Jadwal Trial Belajar</p>
+                  <p className="text-[11px] text-slate-500">Konfirmasi hari, tanggal, mapel, dan lokasi trial</p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTemplateType('ppdbAccepted')}
+                className={`p-4 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between gap-2 ${
+                  activeTemplateType === 'ppdbAccepted'
+                    ? 'bg-purple-50/90 border-purple-300 ring-2 ring-purple-500 shadow-sm'
+                    : 'bg-white border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="w-8 h-8 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs">
+                    🎓
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
+                    Diterima Resmi
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900 font-heading">Pemberitahuan Diterima Resmi</p>
+                  <p className="text-[11px] text-slate-500">Ucapan selamat diterima & pemberian Kode Siswa resmi</p>
+                </div>
+              </button>
+            </div>
           </div>
 
           {/* Main Editor & Live Preview Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start pt-2">
             {/* LEFT: Text Editor & Placeholder Helper (7 cols) */}
             <div className="lg:col-span-7 space-y-4">
               <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
@@ -3006,6 +3915,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       {activeTemplateType === 'partial' && 'Edit Template: Tagihan Bayar Sebagian'}
                       {activeTemplateType === 'paid' && 'Edit Template: Konfirmasi Pembayaran Lunas'}
                       {activeTemplateType === 'report' && 'Edit Template: Laporan Presensi & Evaluasi'}
+                      {activeTemplateType === 'ppdbGreeting' && 'Edit Template PPDB: Follow-up & Info Trial Belajar'}
+                      {activeTemplateType === 'ppdbTrial' && 'Edit Template PPDB: Konfirmasi Jadwal Trial Belajar'}
+                      {activeTemplateType === 'ppdbAccepted' && 'Edit Template PPDB: Pemberitahuan Diterima Resmi'}
                     </h4>
                   </div>
 
@@ -3019,7 +3931,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           ? whatsappForm.partialBilling || DEFAULT_WA_TEMPLATES.partialBilling
                           : activeTemplateType === 'paid'
                           ? whatsappForm.paidBilling || DEFAULT_WA_TEMPLATES.paidBilling
-                          : whatsappForm.studentReport || DEFAULT_WA_TEMPLATES.studentReport;
+                          : activeTemplateType === 'report'
+                          ? whatsappForm.studentReport || DEFAULT_WA_TEMPLATES.studentReport
+                          : activeTemplateType === 'ppdbGreeting'
+                          ? whatsappForm.ppdbGreeting || DEFAULT_WA_TEMPLATES.ppdbGreeting
+                          : activeTemplateType === 'ppdbTrial'
+                          ? whatsappForm.ppdbTrial || DEFAULT_WA_TEMPLATES.ppdbTrial
+                          : whatsappForm.ppdbAccepted || DEFAULT_WA_TEMPLATES.ppdbAccepted;
                       navigator.clipboard.writeText(cur);
                       setCopiedTemplate(true);
                       setTimeout(() => setCopiedTemplate(false), 2000);
@@ -3042,11 +3960,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                 {/* Textarea Area */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Format Isi Pesan:
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-slate-700">
+                      Format Isi Pesan:
+                    </label>
+                    <span className="text-[11px] text-slate-400 font-medium">
+                      {(activeTemplateType === 'unpaid'
+                        ? whatsappForm.unpaidBilling || ''
+                        : activeTemplateType === 'partial'
+                        ? whatsappForm.partialBilling || ''
+                        : activeTemplateType === 'paid'
+                        ? whatsappForm.paidBilling || ''
+                        : activeTemplateType === 'report'
+                        ? whatsappForm.studentReport || ''
+                        : activeTemplateType === 'ppdbGreeting'
+                        ? whatsappForm.ppdbGreeting || ''
+                        : activeTemplateType === 'ppdbTrial'
+                        ? whatsappForm.ppdbTrial || ''
+                        : whatsappForm.ppdbAccepted || ''
+                      ).length}{' '}
+                      karakter
+                    </span>
+                  </div>
                   <textarea
-                    rows={12}
+                    rows={13}
                     value={
                       activeTemplateType === 'unpaid'
                         ? whatsappForm.unpaidBilling || ''
@@ -3054,7 +3991,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         ? whatsappForm.partialBilling || ''
                         : activeTemplateType === 'paid'
                         ? whatsappForm.paidBilling || ''
-                        : whatsappForm.studentReport || ''
+                        : activeTemplateType === 'report'
+                        ? whatsappForm.studentReport || ''
+                        : activeTemplateType === 'ppdbGreeting'
+                        ? whatsappForm.ppdbGreeting || ''
+                        : activeTemplateType === 'ppdbTrial'
+                        ? whatsappForm.ppdbTrial || ''
+                        : whatsappForm.ppdbAccepted || ''
                     }
                     onChange={(e) => {
                       const val = e.target.value;
@@ -3064,29 +4007,61 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         setWhatsappForm({ ...whatsappForm, partialBilling: val });
                       } else if (activeTemplateType === 'paid') {
                         setWhatsappForm({ ...whatsappForm, paidBilling: val });
-                      } else {
+                      } else if (activeTemplateType === 'report') {
                         setWhatsappForm({ ...whatsappForm, studentReport: val });
+                      } else if (activeTemplateType === 'ppdbGreeting') {
+                        setWhatsappForm({ ...whatsappForm, ppdbGreeting: val });
+                      } else if (activeTemplateType === 'ppdbTrial') {
+                        setWhatsappForm({ ...whatsappForm, ppdbTrial: val });
+                      } else {
+                        setWhatsappForm({ ...whatsappForm, ppdbAccepted: val });
                       }
                     }}
                     placeholder="Tuliskan format pesan WhatsApp di sini..."
                     className="w-full p-4 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-mono leading-relaxed text-slate-800 focus:bg-white focus:ring-2 focus:ring-emerald-500 resize-y"
                   />
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Tips WhatsApp: Gunakan <span className="font-bold text-slate-600">*teks tebal*</span> untuk huruf tebal, <span className="italic text-slate-600">_teks miring_</span> untuk cetak miring, dan <span className="font-mono text-slate-600">~coret~</span> untuk teks tercoret.
+                  <p className="text-[11px] text-slate-400 mt-1.5">
+                    Tips Format WA: Gunakan <span className="font-bold text-slate-600">*teks tebal*</span>, <span className="italic text-slate-600">_teks miring_</span>, dan <span className="font-mono text-slate-600">~coret~</span>.
                   </p>
                 </div>
 
-                {/* Variable Placeholder Chips */}
-                <div className="pt-3 border-t border-slate-100 space-y-2">
-                  <div className="flex items-center justify-between">
+                {/* Variable Placeholder Chips with Filter */}
+                <div className="pt-3 border-t border-slate-100 space-y-2.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                      Variabel Data Otomatis (Klik untuk menyisipkan ke pesan):
+                      Variabel Otomatis (Klik untuk menyisipkan):
                     </label>
+
+                    {/* Filter Category Pills */}
+                    <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+                      {[
+                        { id: 'all', label: 'Semua' },
+                        { id: 'ppdb', label: 'PPDB' },
+                        { id: 'student', label: 'Siswa & Ortu' },
+                        { id: 'billing', label: 'SPP / Keuangan' },
+                        { id: 'bimbel', label: 'Profil Bimbel' },
+                      ].map((tab) => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setVarCategoryFilter(tab.id as any)}
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition cursor-pointer ${
+                            varCategoryFilter === tab.id
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto p-2 bg-slate-50 border border-slate-200 rounded-xl">
-                    {AVAILABLE_WA_VARIABLES.map((v) => (
+                    {AVAILABLE_WA_VARIABLES.filter(
+                      (v) => varCategoryFilter === 'all' || v.category === varCategoryFilter
+                    ).map((v) => (
                       <button
                         key={v.key}
                         type="button"
@@ -3107,14 +4082,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                               ...whatsappForm,
                               paidBilling: (whatsappForm.paidBilling || '') + ' ' + keyToInsert,
                             });
-                          } else {
+                          } else if (activeTemplateType === 'report') {
                             setWhatsappForm({
                               ...whatsappForm,
                               studentReport: (whatsappForm.studentReport || '') + ' ' + keyToInsert,
                             });
+                          } else if (activeTemplateType === 'ppdbGreeting') {
+                            setWhatsappForm({
+                              ...whatsappForm,
+                              ppdbGreeting: (whatsappForm.ppdbGreeting || '') + ' ' + keyToInsert,
+                            });
+                          } else if (activeTemplateType === 'ppdbTrial') {
+                            setWhatsappForm({
+                              ...whatsappForm,
+                              ppdbTrial: (whatsappForm.ppdbTrial || '') + ' ' + keyToInsert,
+                            });
+                          } else {
+                            setWhatsappForm({
+                              ...whatsappForm,
+                              ppdbAccepted: (whatsappForm.ppdbAccepted || '') + ' ' + keyToInsert,
+                            });
                           }
                         }}
-                        title={`Contoh isi: ${v.example} (${v.label})`}
+                        title={`Kategori: ${v.category.toUpperCase()} | Contoh: ${v.example} (${v.label})`}
                         className="px-2.5 py-1 bg-white hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 rounded-lg text-[11px] font-mono font-medium text-slate-700 transition cursor-pointer shadow-2xs active:scale-95 flex items-center gap-1 group"
                       >
                         <span className="text-emerald-600 font-bold group-hover:text-emerald-700">{v.key}</span>
@@ -3127,7 +4117,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 {/* Save Bar */}
                 <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
                   <span className="text-xs text-slate-500">
-                    Klik tombol simpan untuk mengaktifkan template ini ke seluruh sistem.
+                    Klik tombol simpan untuk mengaktifkan template ini ke seluruh modul sistem.
                   </span>
                   <button
                     type="button"
@@ -3152,7 +4142,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </h4>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">
-                    WhatsApp Chat
+                    {['ppdbGreeting', 'ppdbTrial', 'ppdbAccepted'].includes(activeTemplateType)
+                      ? 'Format PPDB'
+                      : 'Format Siswa'}
                   </span>
                 </div>
 
@@ -3178,7 +4170,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                   {/* WhatsApp Chat Body */}
                   <div
-                    className="p-3.5 space-y-2 min-h-[280px] max-h-[380px] overflow-y-auto text-slate-100 text-xs leading-relaxed"
+                    className="p-3.5 space-y-2 min-h-[280px] max-h-[400px] overflow-y-auto text-slate-100 text-xs leading-relaxed"
                     style={{
                       backgroundColor: '#0b141a',
                       backgroundImage: 'radial-gradient(#1f2c34 1px, transparent 1px)',
@@ -3195,48 +4187,74 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     {/* Chat Bubble Outgoing */}
                     <div className="bg-[#005c4b] text-slate-100 rounded-2xl rounded-tr-xs p-3.5 shadow-md max-w-[95%] ml-auto space-y-1.5 whitespace-pre-wrap font-sans text-xs break-words border border-[#00705a]">
                       {(() => {
+                        const isPpdb = ['ppdbGreeting', 'ppdbTrial', 'ppdbAccepted'].includes(activeTemplateType);
                         const sampleStudent = students[0];
-                        const sampleData = {
-                          nama_siswa: sampleStudent?.name || 'Naureen Zevania Putri Riansyah',
-                          nis: sampleStudent?.code || 'NAUREEN',
-                          kode_siswa: sampleStudent?.code || 'NAUREEN',
-                          nama_ortu: sampleStudent?.parentName || 'Bapak Riansyah',
-                          nomor_ortu: sampleStudent?.parentPhone || '081234567801',
-                          kelas: sampleStudent?.gradeDetail || 'Kelas 2 SD',
-                          tipe_kelas: sampleStudent?.classType || 'Privat',
-                          jenjang: sampleStudent?.level || 'SD',
-                          bulan: 'Agustus',
-                          tahun: 2026,
-                          jumlah_sesi: 8,
-                          tarif_per_sesi: 'Rp 50.000',
-                          daftar_tanggal: '03/08, 07/08, 10/08, 14/08, 17/08, 21/08, 24/08, 28/08',
-                          total_tagihan: 'Rp 400.000',
-                          sudah_dibayar:
-                            activeTemplateType === 'partial'
-                              ? 'Rp 200.000'
-                              : activeTemplateType === 'paid'
-                              ? 'Rp 400.000'
-                              : 'Rp 0',
-                          sisa_tagihan:
-                            activeTemplateType === 'partial'
-                              ? 'Rp 200.000'
-                              : activeTemplateType === 'paid'
-                              ? 'Rp 0'
-                              : 'Rp 400.000',
-                          status_bayar:
-                            activeTemplateType === 'unpaid'
-                              ? 'Belum Bayar'
-                              : activeTemplateType === 'partial'
-                              ? 'Sebagian'
-                              : 'Lunas',
-                          rekening_bimbel:
-                            settings.bankInfo || 'BCA: 8830-1234-56 a.n Bimbel Sigma Mandiri',
-                          nama_bimbel: settings.bimbelName || 'BIMBEL SIGMA',
-                          tagline_bimbel: settings.tagline || 'Belajar Sampai Paham',
-                          telepon_bimbel: settings.phone || '0812-3456-7890',
-                          alamat_bimbel: settings.address || '',
-                          nama_tutor: sampleStudent?.tutorName || 'Kak Sarah Amalia, S.Si.',
-                        };
+
+                        const sampleData = isPpdb
+                          ? {
+                              nama_siswa: 'Muhammad Alfatih',
+                              nama_panggilan: 'Fatih',
+                              nama_ortu: 'Bapak Rahmat Hidayat',
+                              nomor_ortu: '081234567899',
+                              kelas: 'Kelas 4 SD',
+                              jenjang: 'SD',
+                              tipe_kelas: 'Privat',
+                              no_registrasi: 'REG-20260901-001',
+                              nomor_registrasi: 'REG-20260901-001',
+                              mapel_minat: 'Matematika, IPA',
+                              preferensi_jadwal: 'Hari: Senin, Rabu | Waktu: Sore 1 (15:30 - 17:00 WIB)',
+                              tanggal_trial: 'Kamis, 04 September 2026',
+                              sekolah_asal: 'SDN 1 Teladan',
+                              kode_siswa: 'FATIH4',
+                              nis: 'FATIH4',
+                              nama_tutor: 'Kak Sarah Amalia, S.Si.',
+                              nama_bimbel: settings.bimbelName || 'BIMBEL SIGMA',
+                              tagline_bimbel: settings.tagline || 'Belajar Sampai Paham',
+                              telepon_bimbel: settings.phone || '0812-3456-7890',
+                              alamat_bimbel: settings.address || 'Jl. Pemuda No. 12, Blora',
+                              rekening_bimbel: settings.bankInfo || 'BCA: 8830-1234-56 a.n Bimbel Sigma Mandiri',
+                            }
+                          : {
+                              nama_siswa: sampleStudent?.name || 'Naureen Zevania Putri Riansyah',
+                              nis: sampleStudent?.code || 'NAUREEN',
+                              kode_siswa: sampleStudent?.code || 'NAUREEN',
+                              nama_ortu: sampleStudent?.parentName || 'Bapak Riansyah',
+                              nomor_ortu: sampleStudent?.parentPhone || '081234567801',
+                              kelas: sampleStudent?.gradeDetail || 'Kelas 2 SD',
+                              tipe_kelas: sampleStudent?.classType || 'Privat',
+                              jenjang: sampleStudent?.level || 'SD',
+                              bulan: 'Agustus',
+                              tahun: 2026,
+                              jumlah_sesi: 8,
+                              tarif_per_sesi: 'Rp 50.000',
+                              daftar_tanggal: '03/08, 07/08, 10/08, 14/08, 17/08, 21/08, 24/08, 28/08',
+                              total_tagihan: 'Rp 400.000',
+                              sudah_dibayar:
+                                activeTemplateType === 'partial'
+                                  ? 'Rp 200.000'
+                                  : activeTemplateType === 'paid'
+                                  ? 'Rp 400.000'
+                                  : 'Rp 0',
+                              sisa_tagihan:
+                                activeTemplateType === 'partial'
+                                  ? 'Rp 200.000'
+                                  : activeTemplateType === 'paid'
+                                  ? 'Rp 0'
+                                  : 'Rp 400.000',
+                              status_bayar:
+                                activeTemplateType === 'unpaid'
+                                  ? 'Belum Bayar'
+                                  : activeTemplateType === 'partial'
+                                  ? 'Sebagian'
+                                  : 'Lunas',
+                              rekening_bimbel:
+                                settings.bankInfo || 'BCA: 8830-1234-56 a.n Bimbel Sigma Mandiri',
+                              nama_bimbel: settings.bimbelName || 'BIMBEL SIGMA',
+                              tagline_bimbel: settings.tagline || 'Belajar Sampai Paham',
+                              telepon_bimbel: settings.phone || '0812-3456-7890',
+                              alamat_bimbel: settings.address || '',
+                              nama_tutor: sampleStudent?.tutorName || 'Kak Sarah Amalia, S.Si.',
+                            };
 
                         const currentRaw =
                           activeTemplateType === 'unpaid'
@@ -3245,7 +4263,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             ? whatsappForm.partialBilling || DEFAULT_WA_TEMPLATES.partialBilling
                             : activeTemplateType === 'paid'
                             ? whatsappForm.paidBilling || DEFAULT_WA_TEMPLATES.paidBilling
-                            : whatsappForm.studentReport || DEFAULT_WA_TEMPLATES.studentReport;
+                            : activeTemplateType === 'report'
+                            ? whatsappForm.studentReport || DEFAULT_WA_TEMPLATES.studentReport
+                            : activeTemplateType === 'ppdbGreeting'
+                            ? whatsappForm.ppdbGreeting || DEFAULT_WA_TEMPLATES.ppdbGreeting
+                            : activeTemplateType === 'ppdbTrial'
+                            ? whatsappForm.ppdbTrial || DEFAULT_WA_TEMPLATES.ppdbTrial
+                            : whatsappForm.ppdbAccepted || DEFAULT_WA_TEMPLATES.ppdbAccepted;
 
                         return formatWhatsAppMessage(currentRaw, sampleData);
                       })()}
@@ -3274,48 +4298,74 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <button
                       type="button"
                       onClick={() => {
+                        const isPpdb = ['ppdbGreeting', 'ppdbTrial', 'ppdbAccepted'].includes(activeTemplateType);
                         const sampleStudent = students[0];
-                        const sampleData = {
-                          nama_siswa: sampleStudent?.name || 'Naureen Zevania Putri Riansyah',
-                          nis: sampleStudent?.code || 'NAUREEN',
-                          kode_siswa: sampleStudent?.code || 'NAUREEN',
-                          nama_ortu: sampleStudent?.parentName || 'Bapak Riansyah',
-                          nomor_ortu: sampleStudent?.parentPhone || '081234567801',
-                          kelas: sampleStudent?.gradeDetail || 'Kelas 2 SD',
-                          tipe_kelas: sampleStudent?.classType || 'Privat',
-                          jenjang: sampleStudent?.level || 'SD',
-                          bulan: 'Agustus',
-                          tahun: 2026,
-                          jumlah_sesi: 8,
-                          tarif_per_sesi: 'Rp 50.000',
-                          daftar_tanggal: '03/08, 07/08, 10/08, 14/08, 17/08, 21/08, 24/08, 28/08',
-                          total_tagihan: 'Rp 400.000',
-                          sudah_dibayar:
-                            activeTemplateType === 'partial'
-                              ? 'Rp 200.000'
-                              : activeTemplateType === 'paid'
-                              ? 'Rp 400.000'
-                              : 'Rp 0',
-                          sisa_tagihan:
-                            activeTemplateType === 'partial'
-                              ? 'Rp 200.000'
-                              : activeTemplateType === 'paid'
-                              ? 'Rp 0'
-                              : 'Rp 400.000',
-                          status_bayar:
-                            activeTemplateType === 'unpaid'
-                              ? 'Belum Bayar'
-                              : activeTemplateType === 'partial'
-                              ? 'Sebagian'
-                              : 'Lunas',
-                          rekening_bimbel:
-                            settings.bankInfo || 'BCA: 8830-1234-56 a.n Bimbel Sigma Mandiri',
-                          nama_bimbel: settings.bimbelName || 'BIMBEL SIGMA',
-                          tagline_bimbel: settings.tagline || 'Belajar Sampai Paham',
-                          telepon_bimbel: settings.phone || '0812-3456-7890',
-                          alamat_bimbel: settings.address || '',
-                          nama_tutor: sampleStudent?.tutorName || 'Kak Sarah Amalia, S.Si.',
-                        };
+
+                        const sampleData = isPpdb
+                          ? {
+                              nama_siswa: 'Muhammad Alfatih',
+                              nama_panggilan: 'Fatih',
+                              nama_ortu: 'Bapak Rahmat Hidayat',
+                              nomor_ortu: '081234567899',
+                              kelas: 'Kelas 4 SD',
+                              jenjang: 'SD',
+                              tipe_kelas: 'Privat',
+                              no_registrasi: 'REG-20260901-001',
+                              nomor_registrasi: 'REG-20260901-001',
+                              mapel_minat: 'Matematika, IPA',
+                              preferensi_jadwal: 'Hari: Senin, Rabu | Waktu: Sore 1 (15:30 - 17:00 WIB)',
+                              tanggal_trial: 'Kamis, 04 September 2026',
+                              sekolah_asal: 'SDN 1 Teladan',
+                              kode_siswa: 'FATIH4',
+                              nis: 'FATIH4',
+                              nama_tutor: 'Kak Sarah Amalia, S.Si.',
+                              nama_bimbel: settings.bimbelName || 'BIMBEL SIGMA',
+                              tagline_bimbel: settings.tagline || 'Belajar Sampai Paham',
+                              telepon_bimbel: settings.phone || '0812-3456-7890',
+                              alamat_bimbel: settings.address || 'Jl. Pemuda No. 12, Blora',
+                              rekening_bimbel: settings.bankInfo || 'BCA: 8830-1234-56 a.n Bimbel Sigma Mandiri',
+                            }
+                          : {
+                              nama_siswa: sampleStudent?.name || 'Naureen Zevania Putri Riansyah',
+                              nis: sampleStudent?.code || 'NAUREEN',
+                              kode_siswa: sampleStudent?.code || 'NAUREEN',
+                              nama_ortu: sampleStudent?.parentName || 'Bapak Riansyah',
+                              nomor_ortu: sampleStudent?.parentPhone || '081234567801',
+                              kelas: sampleStudent?.gradeDetail || 'Kelas 2 SD',
+                              tipe_kelas: sampleStudent?.classType || 'Privat',
+                              jenjang: sampleStudent?.level || 'SD',
+                              bulan: 'Agustus',
+                              tahun: 2026,
+                              jumlah_sesi: 8,
+                              tarif_per_sesi: 'Rp 50.000',
+                              daftar_tanggal: '03/08, 07/08, 10/08, 14/08, 17/08, 21/08, 24/08, 28/08',
+                              total_tagihan: 'Rp 400.000',
+                              sudah_dibayar:
+                                activeTemplateType === 'partial'
+                                  ? 'Rp 200.000'
+                                  : activeTemplateType === 'paid'
+                                  ? 'Rp 400.000'
+                                  : 'Rp 0',
+                              sisa_tagihan:
+                                activeTemplateType === 'partial'
+                                  ? 'Rp 200.000'
+                                  : activeTemplateType === 'paid'
+                                  ? 'Rp 0'
+                                  : 'Rp 400.000',
+                              status_bayar:
+                                activeTemplateType === 'unpaid'
+                                  ? 'Belum Bayar'
+                                  : activeTemplateType === 'partial'
+                                  ? 'Sebagian'
+                                  : 'Lunas',
+                              rekening_bimbel:
+                                settings.bankInfo || 'BCA: 8830-1234-56 a.n Bimbel Sigma Mandiri',
+                              nama_bimbel: settings.bimbelName || 'BIMBEL SIGMA',
+                              tagline_bimbel: settings.tagline || 'Belajar Sampai Paham',
+                              telepon_bimbel: settings.phone || '0812-3456-7890',
+                              alamat_bimbel: settings.address || '',
+                              nama_tutor: sampleStudent?.tutorName || 'Kak Sarah Amalia, S.Si.',
+                            };
 
                         const currentRaw =
                           activeTemplateType === 'unpaid'
@@ -3324,7 +4374,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             ? whatsappForm.partialBilling || DEFAULT_WA_TEMPLATES.partialBilling
                             : activeTemplateType === 'paid'
                             ? whatsappForm.paidBilling || DEFAULT_WA_TEMPLATES.paidBilling
-                            : whatsappForm.studentReport || DEFAULT_WA_TEMPLATES.studentReport;
+                            : activeTemplateType === 'report'
+                            ? whatsappForm.studentReport || DEFAULT_WA_TEMPLATES.studentReport
+                            : activeTemplateType === 'ppdbGreeting'
+                            ? whatsappForm.ppdbGreeting || DEFAULT_WA_TEMPLATES.ppdbGreeting
+                            : activeTemplateType === 'ppdbTrial'
+                            ? whatsappForm.ppdbTrial || DEFAULT_WA_TEMPLATES.ppdbTrial
+                            : whatsappForm.ppdbAccepted || DEFAULT_WA_TEMPLATES.ppdbAccepted;
 
                         const message = formatWhatsAppMessage(currentRaw, sampleData);
                         sendWhatsAppDirect(testPhoneNumber, message);
@@ -3404,6 +4460,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
               <div className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700 text-xs">
                 <span className="text-[11px] text-slate-400 px-2 font-medium">Tampilkan Banner:</span>
+                <button
+                  type="button"
+                  onClick={() => setPreviewRole('portal')}
+                  className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition cursor-pointer ${
+                    previewRole === 'portal' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Portal Publik
+                </button>
                 <button
                   type="button"
                   onClick={() => setPreviewRole('owner')}
@@ -3489,6 +4554,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
 
                 {/* Dashboard Banner Preview according to chosen role */}
+                {previewRole === 'portal' && (
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-slate-900 border border-indigo-700/50 space-y-1.5">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-[10px] font-extrabold uppercase tracking-wider">
+                      <Sparkles className="w-3 h-3" />
+                      {appearanceForm.portalBannerBadge || 'Pusat Layanan Terpadu Siswa & Calon Siswa Bimbel'}
+                    </div>
+                    <h5 className="text-sm font-black text-white font-heading">
+                      {appearanceForm.portalBannerTitle || `Selamat Datang di Portal Resmi ${settings.bimbelName || 'BIMBEL SIGMA'}`}
+                    </h5>
+                    <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                      {appearanceForm.portalBannerSubtitle || 'Daftarkan ananda secara online, pantau presensi dan tanggal kehadiran harian, serta cek status iuran les secara transparan kapan saja.'}
+                    </p>
+                  </div>
+                )}
+
                 {previewRole === 'owner' && (
                   <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 border border-indigo-700/50 space-y-1.5">
                     <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 text-[10px] font-extrabold uppercase tracking-wider">
@@ -3650,7 +4730,72 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
 
-            {/* CARD 3: TEKS DASHBOARD OWNER */}
+            {/* CARD 3: BANNER HERO PORTAL PUBLIK (PPDB & CEK PRESENSI) */}
+            <div className="bg-white p-6 sm:p-7 rounded-3xl border border-indigo-200 shadow-xs space-y-5 bg-gradient-to-br from-indigo-50/40 via-white to-white">
+              <div className="flex items-center gap-3 pb-3 border-b border-indigo-200/60">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 text-indigo-700 flex items-center justify-center font-bold">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 font-heading flex items-center gap-2">
+                    <span>3. Banner Utama (Hero Banner) Portal Publik</span>
+                    <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-extrabold">Portal Publik</span>
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Pengaturan tulisan pada banner gelap bagian atas di Portal Publik (Pendaftaran PPDB &amp; Cek Presensi Siswa).
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Teks Badge Kecil Atas
+                  </label>
+                  <input
+                    type="text"
+                    value={appearanceForm.portalBannerBadge || ''}
+                    onChange={(e) => setAppearanceForm({ ...appearanceForm, portalBannerBadge: e.target.value })}
+                    placeholder="Pusat Layanan Terpadu Siswa & Calon Siswa Bimbel"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Default: <span className="font-semibold text-slate-600">Pusat Layanan Terpadu Siswa &amp; Calon Siswa Bimbel</span>
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Judul Utama Banner (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    value={appearanceForm.portalBannerTitle || ''}
+                    onChange={(e) => setAppearanceForm({ ...appearanceForm, portalBannerTitle: e.target.value })}
+                    placeholder={`Kosongkan untuk otomatis: Selamat Datang di Portal Resmi ${settings.bimbelName || 'BIMBEL SIGMA'}`}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Bila dikosongkan, judul akan otomatis: <span className="font-semibold text-slate-600">Selamat Datang di Portal Resmi {settings.bimbelName || 'BIMBEL SIGMA'}</span>
+                  </p>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Deskripsi / Subtitle Banner Portal
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={appearanceForm.portalBannerSubtitle || ''}
+                    onChange={(e) => setAppearanceForm({ ...appearanceForm, portalBannerSubtitle: e.target.value })}
+                    placeholder="Daftarkan ananda secara online, pantau presensi dan tanggal kehadiran harian, serta cek status iuran les secara transparan kapan saja."
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 4: TEKS DASHBOARD OWNER */}
             <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-xs space-y-5">
               <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
                 <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
@@ -3658,7 +4803,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-slate-900 font-heading">
-                    3. Kustomisasi Teks Dashboard Owner (Super Admin)
+                    4. Kustomisasi Teks Dashboard Owner (Super Admin)
                   </h4>
                   <p className="text-xs text-slate-500">
                     Pengaturan tulisan pada banner utama dashboard Owner.

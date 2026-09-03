@@ -255,10 +255,8 @@ export const ProfitLossView: React.FC<ProfitLossViewProps> = ({
         ? 60000
         : 50000;
 
-    let accrual = sessions * rate;
-    if (accrual === 0 && std.status === 'Aktif' && std.monthlyFee && std.monthlyFee > 0) {
-      accrual = std.monthlyFee;
-    }
+    // Perhitungan murni berbasis sesi hadir terlaksana x tarif per sesi
+    const accrual = sessions * rate;
 
     studentBreakdownMap[stdKey] = {
       studentId: std.id,
@@ -303,8 +301,8 @@ export const ProfitLossView: React.FC<ProfitLossViewProps> = ({
 
     studentBreakdownMap[key].paidAmount += (inc.amount || 0);
     studentBreakdownMap[key].paymentCount += 1;
-    if (studentBreakdownMap[key].accrualAmount === 0) {
-      studentBreakdownMap[key].accrualAmount = inc.amount || 0;
+    if (studentBreakdownMap[key].accrualAmount === 0 && studentBreakdownMap[key].sessions === 0) {
+      studentBreakdownMap[key].accrualAmount = studentBreakdownMap[key].paidAmount;
     }
   });
 
@@ -495,8 +493,8 @@ export const ProfitLossView: React.FC<ProfitLossViewProps> = ({
       // Detailed monthly export
       const monthlyRows = [
         { 'KOMPONEN LAPORAN': '=== RINGKASAN EKSEKUTIF P&L ===', 'NILAI (RP)': '', 'KETERANGAN': `${targetMonthName} ${selectedYear}` },
-        { 'KOMPONEN LAPORAN': '1. Total Pendapatan Accrual (Hak Layanan)', 'NILAI (RP)': grandTotalMonthlyRevenueAccrual, 'KETERANGAN': 'Pendapatan SPP + Non-SPP' },
-        { 'KOMPONEN LAPORAN': '   - Pendapatan Hak SPP Les Siswa', 'NILAI (RP)': totalSppAccrual, 'KETERANGAN': `${totalSessionsCount} Sesi Hadir Siswa` },
+        { 'KOMPONEN LAPORAN': '1. Total Pendapatan Accrual (Hak Layanan)', 'NILAI (RP)': grandTotalMonthlyRevenueAccrual, 'KETERANGAN': 'Pendapatan Les + Non-SPP' },
+        { 'KOMPONEN LAPORAN': '   - Pendapatan Hak Jasa Les Siswa (Sesi Hadir)', 'NILAI (RP)': totalSppAccrual, 'KETERANGAN': `${totalSessionsCount} Sesi Hadir Siswa` },
         { 'KOMPONEN LAPORAN': '   - Pendapatan Pendaftaran Siswa', 'NILAI (RP)': regFeeIncome, 'KETERANGAN': 'Registrasi Siswa Baru' },
         { 'KOMPONEN LAPORAN': '   - Pendapatan Modul & Buku Paket', 'NILAI (RP)': moduleIncome, 'KETERANGAN': 'Penjualan Modul' },
         { 'KOMPONEN LAPORAN': '   - Pendapatan Try Out & Ujian Simulasi', 'NILAI (RP)': tryOutIncome, 'KETERANGAN': 'Ujian Simulasi' },
@@ -811,7 +809,7 @@ export const ProfitLossView: React.FC<ProfitLossViewProps> = ({
                 <div>
                   <h4 className="font-bold text-slate-900 text-sm">1. Rincian Pendapatan Layanan (Revenue Breakdown)</h4>
                   <p className="text-xs text-slate-500">
-                    Akumulasi nilai hak SPP berdasarkan sesi terlaksana dan penerimaan non-SPP bulan {targetMonthName} {selectedYear}
+                    Akumulasi nilai hak jasa les berdasarkan sesi hadir terlaksana dan penerimaan non-SPP bulan {targetMonthName} {selectedYear}
                   </p>
                 </div>
               </div>
@@ -825,7 +823,7 @@ export const ProfitLossView: React.FC<ProfitLossViewProps> = ({
               <div className="space-y-2.5">
                 <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                   <GraduationCap className="w-4 h-4 text-emerald-600" />
-                  Rincian SPP per Jenjang Pendidikan
+                  Rincian Biaya Les per Jenjang Pendidikan
                 </h5>
                 <div className="overflow-hidden border border-slate-200 rounded-2xl">
                   <table className="w-full text-xs text-left">
@@ -834,7 +832,7 @@ export const ProfitLossView: React.FC<ProfitLossViewProps> = ({
                         <th className="py-2.5 px-3">Jenjang</th>
                         <th className="py-2.5 px-2 text-center">Siswa</th>
                         <th className="py-2.5 px-2 text-center">Sesi</th>
-                        <th className="py-2.5 px-3 text-right">Hak SPP</th>
+                        <th className="py-2.5 px-3 text-right">Hak Jasa Les</th>
                         <th className="py-2.5 px-3 text-right">Terbayar</th>
                       </tr>
                     </thead>
@@ -871,7 +869,7 @@ export const ProfitLossView: React.FC<ProfitLossViewProps> = ({
                 <div className="space-y-2">
                   <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                     <Layers className="w-4 h-4 text-indigo-600" />
-                    Rincian SPP per Tipe Kelas
+                    Rincian Biaya Les per Tipe Kelas
                   </h5>
                   <div className="grid grid-cols-2 gap-3">
                     {classTypeBreakdown.map((ct) => (

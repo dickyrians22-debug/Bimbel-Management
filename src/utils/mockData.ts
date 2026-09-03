@@ -107,6 +107,41 @@ export const DEFAULT_SETTINGS: BimbelSettings = {
     'Siswa yang telah terdaftar resmi akan mendapatkan akses mandiri ke Portal Siswa untuk memantau absensi dan materi belajar.',
   ],
 
+  // Default Pengaturan Pilihan Form PPDB
+  ppdbAvailableSubjects: [
+    'Matematika',
+    'IPA',
+    'Bahasa Inggris',
+    'Bahasa Indonesia',
+    'IPS / PKn',
+    'Calistung (Baca, Tulis, Hitung)',
+    'Persiapan Ujian Sekolah',
+    'Persiapan SNBT / UTBK',
+    'Semua Mapel (All-in-One)',
+  ],
+  ppdbAvailableDays: [
+    'Senin',
+    'Selasa',
+    'Rabu',
+    'Kamis',
+    'Jumat',
+    'Sabtu',
+    'Minggu',
+  ],
+  ppdbAvailableTimeSlots: [
+    'Pagi (08:00 - 10:00 WIB)',
+    'Siang (13:00 - 15:00 WIB)',
+    'Sore 1 (15:30 - 17:00 WIB)',
+    'Sore 2 (16:00 - 17:30 WIB)',
+    'Malam (18:30 - 20:00 WIB)',
+    'Fleksibel / Menyesuaikan',
+  ],
+
+  // Default Pengaturan Banner Portal Publik
+  portalBannerBadge: 'Pusat Layanan Terpadu Siswa & Calon Siswa Bimbel',
+  portalBannerTitle: '',
+  portalBannerSubtitle: 'Daftarkan ananda secara online, pantau presensi dan tanggal kehadiran harian, serta cek status iuran les secara transparan kapan saja.',
+
   ownerDashboardBadge: 'Executive Dashboard (Owner Access)',
   ownerDashboardTitle: '',
   ownerDashboardMessage: 'Pantau metrik finansial, absensi digital real-time, dan pembukuan tahunan dalam satu pintu.',

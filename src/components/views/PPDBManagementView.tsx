@@ -34,7 +34,12 @@ import {
   UserRole,
 } from '../../types';
 import { formatDateIndo, formatRupiah } from '../../utils/storage';
-import { sendWhatsAppDirect } from '../../utils/whatsapp';
+import {
+  sendWhatsAppDirect,
+  formatWhatsAppMessage,
+  DEFAULT_WA_TEMPLATES,
+  WhatsAppTemplateData,
+} from '../../utils/whatsapp';
 import { ConvertProspectiveModal } from '../modals/ConvertProspectiveModal';
 import { ProspectiveModal } from '../modals/ProspectiveModal';
 import { RegistrationReceiptModal } from '../modals/RegistrationReceiptModal';
@@ -128,39 +133,39 @@ export const PPDBManagementView: React.FC<PPDBManagementViewProps> = ({
 
   // WhatsApp Templates
   const handleSendWA = (item: ProspectiveStudent, type: 'greeting' | 'trial' | 'accepted') => {
-    let msg = '';
-    if (type === 'greeting') {
-      msg = `Halo Bapak/Ibu ${item.parentName},
+    const customTemplates = settings?.whatsappTemplates;
+    const templateString =
+      type === 'greeting'
+        ? customTemplates?.ppdbGreeting || DEFAULT_WA_TEMPLATES.ppdbGreeting
+        : type === 'trial'
+        ? customTemplates?.ppdbTrial || DEFAULT_WA_TEMPLATES.ppdbTrial
+        : customTemplates?.ppdbAccepted || DEFAULT_WA_TEMPLATES.ppdbAccepted;
 
-Terima kasih telah mendaftarkan ananda *${item.studentName}* (${item.gradeDetail}) di *${bimbelName}* dengan No. Registrasi: *${item.registrationNumber}*.
+    const templateData: WhatsAppTemplateData = {
+      nama_ortu: item.parentName,
+      nama_siswa: item.studentName,
+      nama_panggilan: item.nickname || item.studentName.split(' ')[0],
+      kelas: item.gradeDetail || item.level,
+      jenjang: item.level,
+      tipe_kelas: item.classType,
+      no_registrasi: item.registrationNumber,
+      nomor_registrasi: item.registrationNumber,
+      mapel_minat: (item.interestedSubjects || []).join(', ') || 'Semua Mapel',
+      preferensi_jadwal: item.preferredSchedule || 'Fleksibel / Sesuai Kesepakatan',
+      tanggal_trial: item.trialDate ? formatDateIndo(item.trialDate) : 'Sesuai Kesepakatan',
+      sekolah_asal: item.schoolOrigin || '-',
+      nama_tutor: item.assignedTutorName || 'Tutor Bimbel',
+      kode_siswa: item.convertedStudentCode || item.registrationNumber,
+      nis: item.convertedStudentCode || item.registrationNumber,
+      nomor_ortu: item.parentPhone,
+      nama_bimbel: bimbelName,
+      tagline_bimbel: settings?.tagline || '',
+      telepon_bimbel: settings?.phone || '',
+      alamat_bimbel: settings?.address || bimbelName,
+      rekening_bimbel: settings?.bankInfo || '',
+    };
 
-📌 *Informasi Sesi Trial Belajar*:
-Ananda dapat mengikuti *Sesi Trial Belajar* terlebih dahulu (hanya membayar biaya per sesi trial, *tanpa dikenakan biaya pendaftaran di awal*). Setelah sesi trial selesai dan ananda merasa cocok, barulah dapat melanjutkan proses pendaftaran resmi.
-
-• Mapel Minat: *${item.interestedSubjects.join(', ')}*
-• Tipe Kelas: *${item.classType}*
-${item.preferredSchedule ? `• Preferensi Jadwal: *${item.preferredSchedule}*\n` : ''}
-Kapan waktu yang nyaman bagi Bapak/Ibu untuk berdiskusi terkait jadwal sesi trial ananda? Terima kasih! 🙏✨`;
-    } else if (type === 'trial') {
-      msg = `Halo Bapak/Ibu ${item.parentName},
-
-Kami dari *${bimbelName}* ingin mengonfirmasi jadwal *Sesi Trial Belajar* untuk ananda *${item.studentName}* pada:
-• Tanggal: *${item.trialDate ? formatDateIndo(item.trialDate) : 'Sesuai Kesepakatan'}*
-• Mapel: *${item.interestedSubjects.join(', ')}*
-• Tipe Kelas: *${item.classType}*
-• Lokasi: ${settings?.address || bimbelName}
-
-💡 *Catatan:* Sesi trial ini berbayar per sesi belajar saja (belum dikenakan biaya pendaftaran). Apabila ananda merasa cocok setelah sesi trial, pendaftaran resmi dapat langsung dilanjutkan.
-
-Apakah jadwal di atas sudah sesuai untuk ananda? Terima kasih! 🙏✨`;
-    } else {
-      msg = `Selamat Bapak/Ibu ${item.parentName}! 🎉
-
-Pendaftaran ananda *${item.studentName}* di *${bimbelName}* telah kami *TERIMA* secara resmi sebagai siswa aktif (${item.convertedStudentCode || item.registrationNumber}).
-
-Selamat bergabung dalam keluarga besar *${bimbelName}*. Mari bersama mendidik ananda sampai paham! 📚✨`;
-    }
-
+    const msg = formatWhatsAppMessage(templateString, templateData);
     sendWhatsAppDirect(item.parentPhone, msg);
   };
 

@@ -1,0 +1,128 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "Active registered student at Bimbel Sigma",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string" },
+        "name": { "type": "string" },
+        "nickname": { "type": "string" },
+        "parentName": { "type": "string" },
+        "parentPhone": { "type": "string" },
+        "gradeDetail": { "type": "string" },
+        "level": { "type": "string" },
+        "classType": { "type": "string" },
+        "tutorName": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "code", "name"]
+    },
+    "AttendanceRecord": {
+      "title": "AttendanceRecord",
+      "description": "Attendance and learning session log for a student",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "tutorName": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "date", "studentId", "status"]
+    },
+    "IncomeRecord": {
+      "title": "IncomeRecord",
+      "description": "Financial income transaction or SPP billing payment",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["id", "date", "amount", "type"]
+    },
+    "ExpenseRecord": {
+      "title": "ExpenseRecord",
+      "description": "Operational expense transaction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["id", "date", "amount", "category"]
+    },
+    "UserAccount": {
+      "title": "UserAccount",
+      "description": "System user account with role-based access",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" }
+      },
+      "required": ["id", "username", "role"]
+    },
+    "BimbelSettings": {
+      "title": "BimbelSettings",
+      "description": "Application settings and WhatsApp template configurations",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "bimbelName": { "type": "string" },
+        "phone": { "type": "string" }
+      },
+      "required": ["id", "bimbelName"]
+    },
+    "ProspectiveStudent": {
+      "title": "ProspectiveStudent",
+      "description": "PPDB prospective student applicant and trial session",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "registrationNo": { "type": "string" },
+        "fullName": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "registrationNo", "fullName", "status"]
+    }
+  },
+  "firestore": {
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Collection of active bimbel students"
+    },
+    "/attendance/{attendanceId}": {
+      "schema": "AttendanceRecord",
+      "description": "Collection of student attendance records"
+    },
+    "/incomes/{incomeId}": {
+      "schema": "IncomeRecord",
+      "description": "Collection of income and tuition payments"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "ExpenseRecord",
+      "description": "Collection of operational expenses"
+    },
+    "/users/{userId}": {
+      "schema": "UserAccount",
+      "description": "Collection of app users and credentials"
+    },
+    "/settings/{settingsId}": {
+      "schema": "BimbelSettings",
+      "description": "Collection for bimbel settings and configuration"
+    },
+    "/prospective_students/{prospectId}": {
+      "schema": "ProspectiveStudent",
+      "description": "Collection of prospective student applicants"
+    }
+  }
+}

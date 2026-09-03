@@ -1,4 +1,5 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { getAuth, Auth } from 'firebase/auth';
 import {
   initializeFirestore,
   getFirestore,
@@ -9,6 +10,7 @@ import {
   deleteDoc,
   onSnapshot,
   getDocs,
+  getDocFromServer,
   writeBatch,
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -16,6 +18,7 @@ import firebaseConfig from '../../firebase-applet-config.json';
 // Initialize Firebase App instance
 let app: FirebaseApp;
 let db: Firestore;
+let auth: Auth;
 
 try {
   if (!getApps().length) {
@@ -24,6 +27,8 @@ try {
     app = getApp();
   }
 
+  auth = getAuth(app);
+
   // Use custom databaseId if configured, or default
   const databaseId =
     firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId.trim() !== ''
@@ -31,17 +36,82 @@ try {
       : '(default)';
 
   try {
-    db = initializeFirestore(app, {
-      experimentalAutoDetectLongPolling: true,
-    }, databaseId);
+    // Auto detect long polling to gracefully handle sandboxed iframes & varying network conditions
+    db = initializeFirestore(
+      app,
+      {
+        experimentalAutoDetectLongPolling: true,
+      },
+      databaseId
+    );
   } catch {
     db = getFirestore(app, databaseId);
   }
 } catch (error) {
-  console.error('Failed to initialize Firebase:', error);
+  console.warn('Firebase initialization notice:', error);
 }
 
-export { app, db };
+// Validate Connection to Firestore (Per skill guidelines)
+async function testConnection() {
+  if (!db) return;
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if (error instanceof Error && (error.message.includes('the client is offline') || error.message.includes('unavailable'))) {
+      console.warn('Firestore operating in offline/cached mode. Local data will remain active.');
+    }
+  }
+}
+testConnection();
+
+export { app, db, auth };
+
+// Operation types for error diagnostics
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth?.currentUser?.uid,
+      email: auth?.currentUser?.email,
+      emailVerified: auth?.currentUser?.emailVerified,
+      isAnonymous: auth?.currentUser?.isAnonymous,
+      tenantId: auth?.currentUser?.tenantId,
+      providerInfo: auth?.currentUser?.providerData?.map((provider) => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || [],
+    },
+    operationType,
+    path,
+  };
+  console.warn('Firestore Operation Info:', JSON.stringify(errInfo));
+}
 
 // Collection constants
 export const COLLECTIONS = {
@@ -57,7 +127,7 @@ export const COLLECTIONS = {
 export type CollectionKey = keyof typeof COLLECTIONS;
 
 /**
- * Realtime subscription listener for any Firestore collection
+ * Realtime subscription listener for any Firestore collection with graceful offline handling
  */
 export function subscribeToCollection<T>(
   collectionName: string,
@@ -84,13 +154,13 @@ export function subscribeToCollection<T>(
         onUpdate(items);
       },
       (error) => {
-        console.error(`Error subscribing to collection ${collectionName}:`, error);
+        handleFirestoreError(error, OperationType.GET, collectionName);
         if (onError) onError(error);
       }
     );
     return unsubscribe;
   } catch (err: any) {
-    console.error(`Exception setting up listener for ${collectionName}:`, err);
+    handleFirestoreError(err, OperationType.GET, collectionName);
     if (onError) onError(err);
     return () => {};
   }
@@ -111,8 +181,7 @@ export async function syncDocToFirestore<T extends { id: string }>(
     const cleanData = JSON.parse(JSON.stringify(data));
     await setDoc(docRef, cleanData, { merge: true });
   } catch (error) {
-    console.error(`Error syncing doc ${docId} to ${collectionName}:`, error);
-    throw error;
+    handleFirestoreError(error, OperationType.WRITE, `${collectionName}/${docId}`);
   }
 }
 
@@ -128,8 +197,7 @@ export async function deleteDocFromFirestore(
     const docRef = doc(db, collectionName, docId);
     await deleteDoc(docRef);
   } catch (error) {
-    console.error(`Error deleting doc ${docId} from ${collectionName}:`, error);
-    throw error;
+    handleFirestoreError(error, OperationType.DELETE, `${collectionName}/${docId}`);
   }
 }
 
@@ -150,8 +218,7 @@ export async function batchSeedToFirestore(
     });
     await batch.commit();
   } catch (error) {
-    console.error(`Error batch seeding to ${collectionName}:`, error);
-    throw error;
+    handleFirestoreError(error, OperationType.WRITE, collectionName);
   }
 }
 
@@ -185,8 +252,7 @@ export async function replaceAllInCollection(
       await insertBatch.commit();
     }
   } catch (error) {
-    console.error(`Error replacing collection ${collectionName}:`, error);
-    throw error;
+    handleFirestoreError(error, OperationType.WRITE, collectionName);
   }
 }
 
@@ -206,8 +272,7 @@ export async function clearFirestoreCollection(collectionName: string): Promise<
     });
     await deleteBatch.commit();
   } catch (error) {
-    console.error(`Error clearing collection ${collectionName}:`, error);
-    throw error;
+    handleFirestoreError(error, OperationType.DELETE, collectionName);
   }
 }
 
@@ -221,7 +286,7 @@ export async function checkCollectionCount(collectionName: string): Promise<numb
     const snapshot = await getDocs(colRef);
     return snapshot.size;
   } catch (error) {
-    console.error(`Error checking count for ${collectionName}:`, error);
+    handleFirestoreError(error, OperationType.GET, collectionName);
     return 0;
   }
 }

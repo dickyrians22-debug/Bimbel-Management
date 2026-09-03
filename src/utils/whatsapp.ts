@@ -47,10 +47,42 @@ Berikut adalah Rekapitulasi Presensi & Evaluasi Pembelajaran ananda di *{{nama_b
 • Tutor Pembimbing: *{{nama_tutor}}*
 
 Rincian materi yang telah dipelajari dapat dilihat pada lembar laporan belajar terlampir. Terima kasih atas dukungan Bapak/Ibu untuk kemajuan belajar ananda! 🌟📚`,
+
+  ppdbGreeting: `Halo Bapak/Ibu {{nama_ortu}},
+
+Terima kasih telah mendaftarkan ananda *{{nama_siswa}}* ({{kelas}}) di *{{nama_bimbel}}* dengan No. Registrasi: *{{no_registrasi}}*.
+
+📌 *Informasi Sesi Trial Belajar*:
+Ananda dapat mengikuti *Sesi Trial Belajar* terlebih dahulu (hanya membayar biaya per sesi trial, *tanpa dikenakan biaya pendaftaran di awal*). Setelah sesi trial selesai dan ananda merasa cocok, barulah dapat melanjutkan proses pendaftaran resmi.
+
+• Mapel Minat: *{{mapel_minat}}*
+• Tipe Kelas: *{{tipe_kelas}}*
+• Preferensi Jadwal: *{{preferensi_jadwal}}*
+
+Kapan waktu yang nyaman bagi Bapak/Ibu untuk berdiskusi terkait jadwal sesi trial ananda? Terima kasih! 🙏✨`,
+
+  ppdbTrial: `Halo Bapak/Ibu {{nama_ortu}},
+
+Kami dari *{{nama_bimbel}}* ingin mengonfirmasi jadwal *Sesi Trial Belajar* untuk ananda *{{nama_siswa}}* pada:
+• Tanggal: *{{tanggal_trial}}*
+• Mapel: *{{mapel_minat}}*
+• Tipe Kelas: *{{tipe_kelas}}*
+• Lokasi: {{alamat_bimbel}}
+
+💡 *Catatan:* Sesi trial ini berbayar per sesi belajar saja (belum dikenakan biaya pendaftaran). Apabila ananda merasa cocok setelah sesi trial, pendaftaran resmi dapat langsung dilanjutkan.
+
+Apakah jadwal di atas sudah sesuai untuk ananda? Terima kasih! 🙏✨`,
+
+  ppdbAccepted: `Selamat Bapak/Ibu {{nama_ortu}}! 🎉
+
+Pendaftaran ananda *{{nama_siswa}}* di *{{nama_bimbel}}* telah kami *TERIMA* secara resmi sebagai siswa aktif (Kode Siswa / NIS: *{{kode_siswa}}*).
+
+Selamat bergabung dalam keluarga besar *{{nama_bimbel}}*. Mari bersama mendidik ananda sampai paham! 📚✨`,
 };
 
 export interface WhatsAppTemplateData {
   nama_siswa?: string;
+  nama_panggilan?: string;
   nis?: string;
   kode_siswa?: string;
   nama_ortu?: string;
@@ -73,6 +105,13 @@ export interface WhatsAppTemplateData {
   telepon_bimbel?: string;
   alamat_bimbel?: string;
   nama_tutor?: string;
+  // PPDB specific fields
+  no_registrasi?: string;
+  nomor_registrasi?: string;
+  mapel_minat?: string;
+  preferensi_jadwal?: string;
+  tanggal_trial?: string;
+  sekolah_asal?: string;
   [key: string]: string | number | undefined;
 }
 
@@ -98,6 +137,12 @@ export function formatWhatsAppMessage(template: string, data: WhatsAppTemplateDa
   }
   if (data.nis && !data.kode_siswa) {
     result = result.replace(/\{\{\s*kode_siswa\s*\}\}/gi, String(data.nis));
+  }
+  if (data.no_registrasi && !data.nomor_registrasi) {
+    result = result.replace(/\{\{\s*nomor_registrasi\s*\}\}/gi, String(data.no_registrasi));
+  }
+  if (data.nomor_registrasi && !data.no_registrasi) {
+    result = result.replace(/\{\{\s*no_registrasi\s*\}\}/gi, String(data.nomor_registrasi));
   }
 
   return result;
@@ -126,23 +171,40 @@ export function sendWhatsAppDirect(phone: string | undefined, message: string): 
  * Standard list of variable placeholders for documentation
  */
 export const AVAILABLE_WA_VARIABLES = [
-  { key: '{{nama_siswa}}', label: 'Nama Lengkap Siswa', example: 'Naureen Zevania' },
-  { key: '{{nis}}', label: 'Kode / NIS Siswa', example: 'NAUREEN' },
-  { key: '{{nama_ortu}}', label: 'Nama Orang Tua / Wali', example: 'Bapak Hendra' },
-  { key: '{{kelas}}', label: 'Jenjang / Detail Kelas', example: 'Kelas 5 SD' },
-  { key: '{{tipe_kelas}}', label: 'Tipe Kelas', example: 'Privat / Grup' },
-  { key: '{{bulan}}', label: 'Bulan Tagihan/Laporan', example: 'Agustus' },
-  { key: '{{tahun}}', label: 'Tahun', example: '2026' },
-  { key: '{{jumlah_sesi}}', label: 'Total Kehadiran / Sesi', example: '8' },
-  { key: '{{tarif_per_sesi}}', label: 'Tarif per Sesi', example: 'Rp 50.000' },
-  { key: '{{daftar_tanggal}}', label: 'Daftar Tanggal Hadir', example: '03/08, 06/08, 10/08' },
-  { key: '{{total_tagihan}}', label: 'Nominal Total Tagihan', example: 'Rp 400.000' },
-  { key: '{{sudah_dibayar}}', label: 'Nominal Sudah Dibayar', example: 'Rp 200.000' },
-  { key: '{{sisa_tagihan}}', label: 'Sisa Kurang Bayar', example: 'Rp 200.000' },
-  { key: '{{status_bayar}}', label: 'Status Pembayaran', example: 'Belum Bayar / Sebagian / Lunas' },
-  { key: '{{rekening_bimbel}}', label: 'Info Rekening Bank Bimbel', example: 'BCA: 8830-1234-56 a.n Bimbel' },
-  { key: '{{nama_bimbel}}', label: 'Nama Resmi Bimbel', example: 'BIMBEL SIGMA' },
-  { key: '{{tagline_bimbel}}', label: 'Slogan / Tagline Bimbel', example: 'Belajar Sampai Paham' },
-  { key: '{{telepon_bimbel}}', label: 'No. Telepon / CS Bimbel', example: '0812-3456-7890' },
-  { key: '{{nama_tutor}}', label: 'Nama Tutor Pengajar', example: 'Kak Sarah Amalia, S.Si.' },
+  // PPDB Variables
+  { key: '{{no_registrasi}}', label: 'No. Registrasi Calon Siswa (PPDB)', category: 'ppdb', example: 'REG-20260901-001' },
+  { key: '{{mapel_minat}}', label: 'Mata Pelajaran yang Diminati', category: 'ppdb', example: 'Matematika, IPA' },
+  { key: '{{preferensi_jadwal}}', label: 'Preferensi Hari & Jam Belajar', category: 'ppdb', example: 'Hari: Senin, Rabu | Waktu: Sore 1 (15:30 - 17:00 WIB)' },
+  { key: '{{tanggal_trial}}', label: 'Tanggal Sesi Trial Belajar', category: 'ppdb', example: 'Kamis, 04 September 2026' },
+  { key: '{{sekolah_asal}}', label: 'Asal Sekolah Calon Siswa', category: 'ppdb', example: 'SDN 1 Teladan' },
+  { key: '{{nama_panggilan}}', label: 'Nama Panggilan Siswa', category: 'ppdb', example: 'Fatih' },
+
+  // General Student & Parent Variables
+  { key: '{{nama_siswa}}', label: 'Nama Lengkap Siswa', category: 'student', example: 'Naureen Zevania' },
+  { key: '{{nis}}', label: 'Kode / NIS Siswa', category: 'student', example: 'NAUREEN' },
+  { key: '{{kode_siswa}}', label: 'Kode Siswa Resmi', category: 'student', example: 'NAUREEN4' },
+  { key: '{{nama_ortu}}', label: 'Nama Orang Tua / Wali', category: 'student', example: 'Bapak Hendra' },
+  { key: '{{nomor_ortu}}', label: 'No. WhatsApp Orang Tua', category: 'student', example: '081234567890' },
+  { key: '{{kelas}}', label: 'Jenjang / Detail Kelas', category: 'student', example: 'Kelas 5 SD' },
+  { key: '{{tipe_kelas}}', label: 'Tipe Kelas', category: 'student', example: 'Privat / Grup' },
+  { key: '{{jenjang}}', label: 'Tingkat Jenjang', category: 'student', example: 'SD' },
+  { key: '{{nama_tutor}}', label: 'Nama Tutor Pengajar', category: 'student', example: 'Kak Sarah Amalia, S.Si.' },
+
+  // Billing / SPP Variables
+  { key: '{{bulan}}', label: 'Bulan Tagihan/Laporan', category: 'billing', example: 'Agustus' },
+  { key: '{{tahun}}', label: 'Tahun', category: 'billing', example: '2026' },
+  { key: '{{jumlah_sesi}}', label: 'Total Kehadiran / Sesi', category: 'billing', example: '8' },
+  { key: '{{tarif_per_sesi}}', label: 'Tarif per Sesi', category: 'billing', example: 'Rp 50.000' },
+  { key: '{{daftar_tanggal}}', label: 'Daftar Tanggal Hadir', category: 'billing', example: '03/08, 06/08, 10/08' },
+  { key: '{{total_tagihan}}', label: 'Nominal Total Tagihan', category: 'billing', example: 'Rp 400.000' },
+  { key: '{{sudah_dibayar}}', label: 'Nominal Sudah Dibayar', category: 'billing', example: 'Rp 200.000' },
+  { key: '{{sisa_tagihan}}', label: 'Sisa Kurang Bayar', category: 'billing', example: 'Rp 200.000' },
+  { key: '{{status_bayar}}', label: 'Status Pembayaran', category: 'billing', example: 'Belum Bayar / Sebagian / Lunas' },
+
+  // Bimbel Profile Variables
+  { key: '{{nama_bimbel}}', label: 'Nama Resmi Bimbel', category: 'bimbel', example: 'BIMBEL SIGMA' },
+  { key: '{{tagline_bimbel}}', label: 'Slogan / Tagline Bimbel', category: 'bimbel', example: 'Belajar Sampai Paham' },
+  { key: '{{telepon_bimbel}}', label: 'No. Telepon / CS Bimbel', category: 'bimbel', example: '0812-3456-7890' },
+  { key: '{{alamat_bimbel}}', label: 'Alamat / Lokasi Bimbel', category: 'bimbel', example: 'Jl. Pemuda No. 12' },
+  { key: '{{rekening_bimbel}}', label: 'Info Rekening Bank Bimbel', category: 'bimbel', example: 'BCA: 8830-1234-56 a.n Bimbel' },
 ];

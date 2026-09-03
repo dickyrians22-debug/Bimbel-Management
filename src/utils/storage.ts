@@ -38,6 +38,24 @@ export const ROLE_ORDER_PRIORITY: Record<string, number> = {
   siswa: 3,
 };
 
+export const DEFAULT_PROGRAM_HIGHLIGHTS = [
+  {
+    id: 'highlight-1',
+    title: 'Jenjang Terpadu',
+    description: 'Melayani bimbingan belajar tingkat PAUD/TK, SD, SMP, SMA/SMK, hingga persiapan UTBK SNBT & Ujian Kedinasan.',
+  },
+  {
+    id: 'highlight-2',
+    title: 'Metode Pasca-Bayar',
+    description: 'Belajar dulu baru bayar sesuai jumlah kehadiran riil (Presensi × Tarif per sesi). Adil dan transparan.',
+  },
+  {
+    id: 'highlight-3',
+    title: 'Presensi Realtime',
+    description: 'Jurnal belajar digital mencatat tanggal kehadiran anak yang bisa dipantau langsung oleh orang tua.',
+  },
+];
+
 /**
  * Sort user accounts by strict role hierarchy: Owner -> Tutor -> Siswa,
  * then alphabetically by name/username for consistent, organized database records.
@@ -370,18 +388,39 @@ export interface StudentMonthlyAttendanceSummary {
 
 export function calculateStudentMonthlySummary(
   student: Student,
-  month: number,
-  year: number,
+  month: number, // 0 for all months
+  year: number,  // 0 for all years
   allAttendance: AttendanceRecord[],
   allIncomes: IncomeRecord[]
 ): StudentMonthlyAttendanceSummary {
-  const targetPrefix = `${year}-${String(month).padStart(2, '0')}`;
+  const isAllTime = month === 0;
+  const targetPrefix = isAllTime ? (year > 0 ? `${year}-` : '') : `${year}-${String(month).padStart(2, '0')}`;
+
+  const cleanStdId = (student.id || '').trim();
+  const cleanStdCode = (student.code || '').trim().toLowerCase();
+  const cleanStdName = (student.name || '').trim().toLowerCase();
+
+  const isAttendanceMatch = (a: AttendanceRecord) => {
+    const aId = (a.studentId || '').trim();
+    const aCode = (a.studentCode || '').trim().toLowerCase();
+    const aName = (a.studentName || '').trim().toLowerCase();
+
+    return (
+      (cleanStdId && aId === cleanStdId) ||
+      (cleanStdCode && aCode && aCode === cleanStdCode) ||
+      (cleanStdName && aName && aName === cleanStdName)
+    );
+  };
 
   const records = allAttendance
-    .filter((a) => a.studentId === student.id && a.date && a.date.startsWith(targetPrefix))
-    .sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.time || '').localeCompare(b.time || ''));
+    .filter((a) => {
+      if (!isAttendanceMatch(a)) return false;
+      if (!targetPrefix) return true;
+      return a.date && a.date.startsWith(targetPrefix);
+    })
+    .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.time || '').localeCompare(a.time || ''));
 
-  // Strict counting logic: if 0 records, it produces exactly 0!
+  // Strict counting logic
   const presentCount = records.filter((r) => r.status === 'Hadir').length;
   const permissionCount = records.filter((r) => r.status === 'Izin').length;
   const sickCount = records.filter((r) => r.status === 'Sakit').length;
@@ -391,13 +430,27 @@ export function calculateStudentMonthlySummary(
   const pricePerSession = student.pricePerSession || 0;
   const totalBilled = presentCount * pricePerSession;
 
+  const isIncomeMatch = (inc: IncomeRecord) => {
+    const incId = (inc.studentId || '').trim();
+    const incCode = (inc.studentCode || '').trim().toLowerCase();
+    const incName = (inc.studentName || '').trim().toLowerCase();
+
+    return (
+      (cleanStdId && incId === cleanStdId) ||
+      (cleanStdCode && incCode && incCode === cleanStdCode) ||
+      (cleanStdName && incName && incName === cleanStdName)
+    );
+  };
+
   const paidForMonth = allIncomes
-    .filter(
-      (inc) =>
-        inc.studentId === student.id &&
-        inc.accrualMonth === month &&
-        inc.accrualYear === year
-    )
+    .filter((inc) => {
+      if (!isIncomeMatch(inc)) return false;
+      if (isAllTime) {
+        if (year > 0) return inc.accrualYear === year;
+        return true;
+      }
+      return inc.accrualMonth === month && inc.accrualYear === year;
+    })
     .reduce((sum, inc) => sum + (inc.amount || 0), 0);
 
   const balanceRemaining = totalBilled - paidForMonth;
