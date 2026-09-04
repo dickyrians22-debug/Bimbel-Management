@@ -45,8 +45,24 @@ export const ConvertProspectiveModal: React.FC<ConvertProspectiveModalProps> = (
 }) => {
   if (!isOpen || !prospective) return null;
 
+  // Check if this prospective student was already converted or matches an existing student
+  const existingLinkedStudent = existingStudents.find(
+    (s) =>
+      (prospective.convertedStudentId && s.id === prospective.convertedStudentId) ||
+      (prospective.convertedStudentCode && s.code.toUpperCase() === prospective.convertedStudentCode.toUpperCase()) ||
+      (s.name.trim().toLowerCase() === prospective.studentName.trim().toLowerCase() &&
+        s.parentPhone.replace(/\D/g, '') === prospective.parentPhone.replace(/\D/g, '') &&
+        prospective.parentPhone.trim().length > 5)
+  );
+
   // Auto-generate suggested Student Code (NIS)
   const generateSuggestedCode = (): string => {
+    if (existingLinkedStudent) {
+      return existingLinkedStudent.code;
+    }
+    if (prospective.convertedStudentCode) {
+      return prospective.convertedStudentCode;
+    }
     // Check if name has initials or short code
     const namePart = (prospective.nickname || prospective.studentName.split(' ')[0] || 'S')
       .slice(0, 3)
@@ -65,6 +81,9 @@ export const ConvertProspectiveModal: React.FC<ConvertProspectiveModalProps> = (
 
   // Determine default price per session based on level and class type
   const getDefaultPricePerSession = (): number => {
+    if (existingLinkedStudent) {
+      return existingLinkedStudent.pricePerSession || (existingLinkedStudent.classType === 'Privat' ? 50000 : 5000);
+    }
     if (prospective.classType === 'Privat') {
       if (prospective.level === 'PAUD' || prospective.level === 'SD') return 50000;
       if (prospective.level === 'SMP') return 60000;
@@ -79,24 +98,30 @@ export const ConvertProspectiveModal: React.FC<ConvertProspectiveModalProps> = (
     }
   };
 
-  const [studentCode, setStudentCode] = useState(generateSuggestedCode());
-  const [studentName, setStudentName] = useState(prospective.studentName);
-  const [level, setLevel] = useState<StudentLevel>(prospective.level);
-  const [gradeDetail, setGradeDetail] = useState(prospective.gradeDetail);
-  const [classType, setClassType] = useState<ClassType>(prospective.classType);
+  const [studentCode, setStudentCode] = useState(existingLinkedStudent ? existingLinkedStudent.code : generateSuggestedCode());
+  const [studentName, setStudentName] = useState(existingLinkedStudent ? existingLinkedStudent.name : prospective.studentName);
+  const [level, setLevel] = useState<StudentLevel>(existingLinkedStudent ? existingLinkedStudent.level : prospective.level);
+  const [gradeDetail, setGradeDetail] = useState(existingLinkedStudent ? existingLinkedStudent.gradeDetail : prospective.gradeDetail);
+  const [classType, setClassType] = useState<ClassType>(existingLinkedStudent ? existingLinkedStudent.classType : prospective.classType);
   const [pricePerSession, setPricePerSession] = useState<number>(getDefaultPricePerSession());
-  const [monthlyFee, setMonthlyFee] = useState<number>(getDefaultPricePerSession() * 8);
-  const [assignedTutor, setAssignedTutor] = useState<string>(
-    prospective.assignedTutorName || (users.find((u) => u.role === 'tutor')?.name) || 'Tutor Bimbel'
+  const [monthlyFee, setMonthlyFee] = useState<number>(
+    existingLinkedStudent?.monthlyFee || getDefaultPricePerSession() * 8
   );
-  const [joinDate, setJoinDate] = useState<string>(getTodayDateString());
-  const [parentName, setParentName] = useState(prospective.parentName);
-  const [parentPhone, setParentPhone] = useState(prospective.parentPhone);
-  const [address, setAddress] = useState(prospective.address || '');
+  const [assignedTutor, setAssignedTutor] = useState<string>(
+    existingLinkedStudent?.tutorName ||
+      prospective.assignedTutorName ||
+      users.find((u) => u.role === 'tutor')?.name ||
+      'Tutor Bimbel'
+  );
+  const [joinDate, setJoinDate] = useState<string>(existingLinkedStudent?.joinDate || getTodayDateString());
+  const [parentName, setParentName] = useState(existingLinkedStudent?.parentName || prospective.parentName);
+  const [parentPhone, setParentPhone] = useState(existingLinkedStudent?.parentPhone || prospective.parentPhone);
+  const [address, setAddress] = useState(existingLinkedStudent?.address || prospective.address || '');
   const [notes, setNotes] = useState(
-    prospective.notes
-      ? `Konversi PPDB (${prospective.registrationNumber}): ${prospective.notes}`
-      : `Pendaftaran via PPDB (${prospective.registrationNumber})`
+    existingLinkedStudent?.notes ||
+      (prospective.notes
+        ? `Konversi PPDB (${prospective.registrationNumber}): ${prospective.notes}`
+        : `Pendaftaran via PPDB (${prospective.registrationNumber})`)
   );
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -112,16 +137,19 @@ export const ConvertProspectiveModal: React.FC<ConvertProspectiveModalProps> = (
       return;
     }
 
-    // Check code duplication
-    const duplicate = existingStudents.find((s) => s.code.toUpperCase() === cleanCode);
+    // Check code duplication against OTHER students
+    const duplicate = existingStudents.find(
+      (s) => s.code.toUpperCase() === cleanCode && (!existingLinkedStudent || s.id !== existingLinkedStudent.id)
+    );
     if (duplicate) {
-      setErrorMsg(`Kode Siswa "${cleanCode}" sudah digunakan oleh siswa ${duplicate.name}. Mohon gunakan kode lain.`);
+      setErrorMsg(`Kode Siswa "${cleanCode}" sudah digunakan oleh siswa lain (${duplicate.name}). Mohon gunakan kode lain.`);
       return;
     }
 
-    const newStudentId = `std-${Date.now()}`;
+    // REUSE existing student ID if this prospective was already converted to prevent duplicates!
+    const targetStudentId = existingLinkedStudent ? existingLinkedStudent.id : `std-${Date.now()}`;
     const newStudent: Student = {
-      id: newStudentId,
+      id: targetStudentId,
       code: cleanCode,
       name: studentName.trim(),
       level,
@@ -137,13 +165,13 @@ export const ConvertProspectiveModal: React.FC<ConvertProspectiveModalProps> = (
       joinDate,
       tutorName: assignedTutor,
       notes: notes.trim() || undefined,
-      createdAt: new Date().toISOString(),
+      createdAt: existingLinkedStudent?.createdAt || new Date().toISOString(),
     };
 
     const updatedProspective: ProspectiveStudent = {
       ...prospective,
       status: 'Diterima',
-      convertedStudentId: newStudentId,
+      convertedStudentId: targetStudentId,
       convertedStudentCode: cleanCode,
       assignedTutorName: assignedTutor,
     };
@@ -181,6 +209,19 @@ export const ConvertProspectiveModal: React.FC<ConvertProspectiveModalProps> = (
 
         {/* Content Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+          {existingLinkedStudent && (
+            <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-900 flex items-start gap-2.5">
+              <Sparkles className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">Calon siswa ini sudah pernah terdaftar di Database Siswa!</p>
+                <p className="text-[11px] text-emerald-700 mt-0.5 leading-relaxed">
+                  Terhubung dengan <strong>{existingLinkedStudent.name}</strong> (NIS: <strong>{existingLinkedStudent.code}</strong>).
+                  Menyimpan formulir ini akan <strong>memperbarui profil siswa yang sudah ada</strong> tanpa membuat data duplikat/ganda.
+                </p>
+              </div>
+            </div>
+          )}
+
           {errorMsg && (
             <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
@@ -352,7 +393,11 @@ export const ConvertProspectiveModal: React.FC<ConvertProspectiveModalProps> = (
               className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 flex items-center gap-2 transition cursor-pointer"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Simpan ke Database Siswa Resmi</span>
+              <span>
+                {existingLinkedStudent
+                  ? `Perbarui Data Siswa (${existingLinkedStudent.code})`
+                  : 'Simpan ke Database Siswa Resmi'}
+              </span>
             </button>
           </div>
         </form>

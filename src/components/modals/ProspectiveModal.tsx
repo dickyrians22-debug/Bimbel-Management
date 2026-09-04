@@ -516,6 +516,11 @@ export const ProspectiveModal: React.FC<ProspectiveModalProps> = ({
                 <option value="Diterima">4. Diterima (Resmi Jadi Siswa)</option>
                 <option value="Batal">5. Batal / Tidak Lanjut</option>
               </select>
+              {initialData?.convertedStudentCode && status !== 'Diterima' && (
+                <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-2 mt-1.5 leading-relaxed">
+                  ⚠️ <strong>Info:</strong> Calon siswa ini sudah pernah disetujui dan memiliki akun di Database Siswa (NIS: <strong>{initialData.convertedStudentCode}</strong>). Mengubah status ke "{status}" di sini tidak menghapus siswa dari Database Utama. Jika nanti diterima kembali, profil siswa yang ada akan otomatis disinkronkan.
+                </p>
+              )}
             </div>
 
             <div>

@@ -200,6 +200,27 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Check if selected student already has attendance on selected date
+  const existingRecordForDate = useMemo(() => {
+    if (!formData.studentId || !formData.date) return null;
+    const targetStudent = students.find((s) => s.id === formData.studentId);
+    const targetId = (formData.studentId || '').trim();
+    const targetCode = (targetStudent?.code || '').trim().toUpperCase();
+    const targetName = (targetStudent?.name || '').trim().toLowerCase();
+
+    return (
+      attendance.find((a) => {
+        if (a.date !== formData.date) return false;
+        // If editing this exact record, ignore
+        if (initialData && a.id === initialData.id) return false;
+        if (targetId && a.studentId && a.studentId.trim() === targetId) return true;
+        if (targetCode && a.studentCode && a.studentCode.trim().toUpperCase() === targetCode) return true;
+        if (targetName && a.studentName && a.studentName.trim().toLowerCase() === targetName) return true;
+        return false;
+      }) || null
+    );
+  }, [formData.studentId, formData.date, students, attendance, initialData]);
+
   if (!isOpen) return null;
 
   const handleSelectStudent = (student: Student) => {
@@ -223,8 +244,11 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
       return;
     }
 
+    // Determine target record ID: either existing editing ID, or existing attendance for same date to prevent duplicate
+    const targetId = initialData?.id || existingRecordForDate?.id;
+
     onSave({
-      ...(initialData ? { id: initialData.id } : {}),
+      ...(targetId ? { id: targetId } : {}),
       date: formData.date,
       time: formData.time,
       studentId: selectedStudent.id,
@@ -469,6 +493,19 @@ export const AttendanceModal: React.FC<AttendanceModalProps> = ({
               </div>
             )}
           </div>
+
+          {/* Warning if student already attended on selected date */}
+          {existingRecordForDate && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-2.5 text-amber-900 animate-in fade-in">
+              <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+              <div className="text-xs">
+                <span className="font-bold">Presensi Tanggal Ini Sudah Ada:</span> {selectedStudent?.name} sudah memiliki catatan presensi pada {formData.date} pukul {existingRecordForDate.time} ({existingRecordForDate.status}).
+                <span className="block mt-0.5 text-amber-700 text-[11px]">
+                  Menyimpan form ini akan memperbarui data tersebut secara otomatis (mencegah data ganda).
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Status Presensi */}
           <div>

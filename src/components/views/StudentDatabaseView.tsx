@@ -20,6 +20,7 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
+  QrCode,
 } from 'lucide-react';
 import { Student, StudentLevel, ClassType, StudentStatus, UserRole, UserAccount } from '../../types';
 import { formatRupiah, formatDateIndo, resolveTutorName } from '../../utils/storage';
@@ -33,6 +34,7 @@ interface StudentDatabaseViewProps {
   onOpenStudentModal: (editStudent?: Student) => void;
   onDeleteStudent: (id: string, name: string) => void;
   onResetStudents?: () => void;
+  onOpenQRCard?: (student: Student) => void;
 }
 
 export const StudentDatabaseView: React.FC<StudentDatabaseViewProps> = ({
@@ -42,6 +44,7 @@ export const StudentDatabaseView: React.FC<StudentDatabaseViewProps> = ({
   onOpenStudentModal,
   onDeleteStudent,
   onResetStudents,
+  onOpenQRCard,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterLevel, setFilterLevel] = useState<string>('All');
@@ -388,6 +391,15 @@ export const StudentDatabaseView: React.FC<StudentDatabaseViewProps> = ({
                       {/* Actions */}
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {onOpenQRCard && (
+                            <button
+                              onClick={() => onOpenQRCard(std)}
+                              title="Lihat & Cetak Kartu QR Siswa"
+                              className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition cursor-pointer"
+                            >
+                              <QrCode className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => setSelectedStudentDetail(std)}
                             title="Lihat Detail Profil"
@@ -579,10 +591,23 @@ export const StudentDatabaseView: React.FC<StudentDatabaseViewProps> = ({
                 </div>
               )}
             </div>
-            <div className="p-4 bg-slate-50 border-t border-slate-100 text-right">
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              {onOpenQRCard && (
+                <button
+                  onClick={() => {
+                    const s = selectedStudentDetail;
+                    setSelectedStudentDetail(null);
+                    onOpenQRCard(s);
+                  }}
+                  className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                >
+                  <QrCode className="w-4 h-4" />
+                  <span>Kartu QR Pelajar</span>
+                </button>
+              )}
               <button
                 onClick={() => setSelectedStudentDetail(null)}
-                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 font-bold text-xs rounded-xl"
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 font-bold text-xs rounded-xl transition cursor-pointer"
               >
                 Tutup
               </button>

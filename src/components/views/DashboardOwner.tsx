@@ -20,6 +20,7 @@ import {
   FileEdit,
   Trash2,
   Receipt,
+  QrCode,
 } from 'lucide-react';
 import { Student, AttendanceRecord, IncomeRecord, ExpenseRecord, ActiveTab, BimbelSettings, UserSession } from '../../types';
 import {
@@ -45,6 +46,7 @@ interface DashboardOwnerProps {
   onOpenExpenseModal: () => void;
   onOpenChangePasswordModal?: () => void;
   onDeleteAttendance?: (id: string, name: string) => void;
+  onOpenQRScanner?: () => void;
 }
 
 export const DashboardOwner: React.FC<DashboardOwnerProps> = ({
@@ -61,6 +63,7 @@ export const DashboardOwner: React.FC<DashboardOwnerProps> = ({
   onOpenExpenseModal,
   onOpenChangePasswordModal,
   onDeleteAttendance,
+  onOpenQRScanner,
 }) => {
   const today = getTodayDateString();
   const currentMonth = new Date().getMonth() + 1;
@@ -143,6 +146,17 @@ export const DashboardOwner: React.FC<DashboardOwnerProps> = ({
 
           {/* Quick Action Buttons */}
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-1 lg:pt-0">
+            {onOpenQRScanner && (
+              <button
+                id="owner-scan-qr-btn"
+                onClick={onOpenQRScanner}
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm shadow-emerald-600/20"
+                title="Pindai QR Code Siswa untuk Absensi Kehadiran"
+              >
+                <QrCode className="w-3.5 h-3.5" />
+                <span>Scan QR Absen</span>
+              </button>
+            )}
             {onOpenChangePasswordModal && (
               <button
                 onClick={onOpenChangePasswordModal}

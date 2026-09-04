@@ -19,9 +19,10 @@ import {
   ChevronDown,
   ChevronUp,
   ChevronsUpDown,
+  QrCode,
 } from 'lucide-react';
 import { AttendanceRecord, Student, UserRole, AttendanceStatus, UserAccount } from '../../types';
-import { formatDateIndo, getTodayDateString, resolveTutorName } from '../../utils/storage';
+import { formatDateIndo, getTodayDateString, resolveTutorName, findAttendanceDuplicates } from '../../utils/storage';
 import { exportToExcel, formatAttendanceForExcel } from '../../utils/exportUtils';
 
 interface AttendanceViewProps {
@@ -33,6 +34,8 @@ interface AttendanceViewProps {
   onOpenAttendanceModal: (editRecord?: AttendanceRecord) => void;
   onOpenBatchAttendanceModal: () => void;
   onDeleteAttendance: (id: string, name: string) => void;
+  onOpenQRScanner?: () => void;
+  onDeduplicateAttendance?: () => void;
 }
 
 export const AttendanceView: React.FC<AttendanceViewProps> = ({
@@ -44,6 +47,8 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
   onOpenAttendanceModal,
   onOpenBatchAttendanceModal,
   onDeleteAttendance,
+  onOpenQRScanner,
+  onDeduplicateAttendance,
 }) => {
   const today = getTodayDateString();
   const [searchTerm, setSearchTerm] = useState('');
@@ -57,6 +62,9 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
   const [currentPage, setCurrentPage] = useState<number>(1);
 
   const canEdit = userRole === 'owner' || userRole === 'tutor';
+
+  // Detect duplicate attendance records (same student on same date)
+  const duplicateInfo = useMemo(() => findAttendanceDuplicates(attendance), [attendance]);
 
   // Filtered records sorted by date descending then time descending
   const filteredAttendance = useMemo(() => {
@@ -180,6 +188,17 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
 
           {canEdit && (
             <>
+              {onOpenQRScanner && (
+                <button
+                  id="attendance-scan-qr-btn"
+                  onClick={onOpenQRScanner}
+                  className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 flex items-center gap-1.5 transition cursor-pointer"
+                  title="Pindai QR Code Siswa untuk Absensi Cepat"
+                >
+                  <QrCode className="w-4 h-4 shrink-0" />
+                  <span>Scan QR Absen</span>
+                </button>
+              )}
               <button
                 onClick={onOpenBatchAttendanceModal}
                 className="px-3 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
@@ -199,6 +218,34 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* Alert if duplicates detected */}
+      {canEdit && duplicateInfo.duplicateCount > 0 && (
+        <div className="p-4 bg-amber-50/90 border border-amber-300 rounded-2xl sm:rounded-3xl shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-amber-200 text-amber-900 flex items-center justify-center shrink-0 font-bold text-xs">
+              ⚠️
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm font-bold text-amber-950">
+                Terdeteksi {duplicateInfo.duplicateCount} Catatan Presensi Ganda
+              </p>
+              <p className="text-[11px] sm:text-xs text-amber-800">
+                Ada siswa yang tercatat lebih dari 1 kali pada tanggal yang sama. Klik tombol di samping untuk menggabungkan dan membersihkan duplikat secara otomatis.
+              </p>
+            </div>
+          </div>
+          {onDeduplicateAttendance && (
+            <button
+              onClick={onDeduplicateAttendance}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Bersihkan Data Ganda</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Filter Bar */}
       <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-3">

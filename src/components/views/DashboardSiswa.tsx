@@ -12,6 +12,7 @@ import {
   GraduationCap,
   Award,
   KeyRound,
+  QrCode,
 } from 'lucide-react';
 import { Student, AttendanceRecord, UserSession, ActiveTab, BimbelSettings } from '../../types';
 import {
@@ -31,6 +32,7 @@ interface DashboardSiswaProps {
   onOpenSelfAttendanceModal: () => void;
   onNavigate: (tab: ActiveTab) => void;
   onOpenChangePasswordModal?: () => void;
+  onOpenQRCard?: (student: Student) => void;
 }
 
 export const DashboardSiswa: React.FC<DashboardSiswaProps> = ({
@@ -42,6 +44,7 @@ export const DashboardSiswa: React.FC<DashboardSiswaProps> = ({
   onOpenSelfAttendanceModal,
   onNavigate,
   onOpenChangePasswordModal,
+  onOpenQRCard,
 }) => {
   const safeStudent: Student = student || {
     id: currentUser?.id || 'std-fallback',
@@ -133,6 +136,18 @@ export const DashboardSiswa: React.FC<DashboardSiswaProps> = ({
               >
                 <Sparkles className="w-4 h-4 text-amber-300" />
                 Absen Masuk Mandiri
+              </button>
+            )}
+
+            {onOpenQRCard && (
+              <button
+                id="student-view-qr-card-btn"
+                onClick={() => onOpenQRCard(safeStudent)}
+                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-2xs flex items-center justify-center gap-1.5 transition cursor-pointer text-xs"
+                title="Tampilkan Kartu QR Code Pelajar"
+              >
+                <QrCode className="w-3.5 h-3.5" />
+                <span>Kartu QR Presensi</span>
               </button>
             )}
 

@@ -353,6 +353,14 @@ export function formatDateIndo(dateString: string): string {
   }
 }
 
+export function formatTimeIndo(timeStr?: string): string {
+  if (!timeStr) {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  }
+  return timeStr;
+}
+
 export function getTodayDateString(): string {
   const d = new Date();
   const year = d.getFullYear();
@@ -1070,6 +1078,85 @@ export function synchronizeTutorNames(
     attendanceChangesCount,
     studentChangesCount,
     expenseChangesCount,
+  };
+}
+
+/**
+ * Detects duplicate attendance records (same student on same date)
+ */
+export function findAttendanceDuplicates(records: AttendanceRecord[]): {
+  duplicateCount: number;
+  duplicateIds: string[];
+} {
+  const seenMap = new Map<string, string>(); // compositeKey -> primary id
+  const duplicateIds: string[] = [];
+
+  for (const record of records) {
+    const sId = (record.studentId || '').trim();
+    const sCode = (record.studentCode || '').trim().toUpperCase();
+    const sName = (record.studentName || '').trim().toLowerCase();
+    const studentKey = sId || sCode || sName;
+
+    if (!record.date || !studentKey) continue;
+
+    const compositeKey = `${record.date}_${studentKey}`;
+    if (seenMap.has(compositeKey)) {
+      duplicateIds.push(record.id);
+    } else {
+      seenMap.set(compositeKey, record.id);
+    }
+  }
+
+  return {
+    duplicateCount: duplicateIds.length,
+    duplicateIds,
+  };
+}
+
+/**
+ * Deduplicates attendance records keeping the most complete record per student per date
+ */
+export function deduplicateAttendanceList(records: AttendanceRecord[]): {
+  cleanList: AttendanceRecord[];
+  removedCount: number;
+} {
+  const map = new Map<string, AttendanceRecord>();
+  let removedCount = 0;
+
+  for (const record of records) {
+    const sId = (record.studentId || '').trim();
+    const sCode = (record.studentCode || '').trim().toUpperCase();
+    const sName = (record.studentName || '').trim().toLowerCase();
+    const studentKey = sId || sCode || sName;
+
+    if (!record.date || !studentKey) {
+      map.set(`fallback_${record.id}`, record);
+      continue;
+    }
+
+    const compositeKey = `${record.date}_${studentKey}`;
+    const existing = map.get(compositeKey);
+
+    if (!existing) {
+      map.set(compositeKey, record);
+    } else {
+      removedCount++;
+      // Merge records: prefer 'Hadir', non-empty topic, longer notes
+      const merged: AttendanceRecord = {
+        ...existing,
+        status: existing.status === 'Hadir' ? 'Hadir' : record.status,
+        time: existing.time || record.time,
+        topic: (existing.topic && existing.topic.length > (record.topic?.length || 0)) ? existing.topic : (record.topic || existing.topic),
+        tutorNotes: (existing.tutorNotes && existing.tutorNotes.length > (record.tutorNotes?.length || 0)) ? existing.tutorNotes : (record.tutorNotes || existing.tutorNotes),
+        tutorName: existing.tutorName || record.tutorName,
+      };
+      map.set(compositeKey, merged);
+    }
+  }
+
+  return {
+    cleanList: Array.from(map.values()),
+    removedCount,
   };
 }
 

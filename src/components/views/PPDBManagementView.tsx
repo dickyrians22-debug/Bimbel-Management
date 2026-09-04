@@ -563,10 +563,10 @@ export const PPDBManagementView: React.FC<PPDBManagementViewProps> = ({
                                 setIsConvertModalOpen(true);
                               }}
                               className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-[11px] flex items-center gap-1 shadow-xs transition cursor-pointer"
-                              title="Jadikan Siswa Resmi (1-Klik)"
+                              title={item.convertedStudentCode ? `Sinkronkan dengan data siswa (${item.convertedStudentCode})` : "Jadikan Siswa Resmi (1-Klik)"}
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>Terima Siswa</span>
+                              <span>{item.convertedStudentCode ? 'Sinkron Siswa' : 'Terima Siswa'}</span>
                             </button>
                           ) : (
                             <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-extrabold rounded-md text-[10px] flex items-center gap-1">
@@ -865,8 +865,9 @@ export const PPDBManagementView: React.FC<PPDBManagementViewProps> = ({
                           setIsConvertModalOpen(true);
                         }}
                         className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold cursor-pointer"
+                        title={item.convertedStudentCode ? `Sinkronkan dengan data siswa (${item.convertedStudentCode})` : "Konfirmasi Penerimaan Siswa"}
                       >
-                        Konfirmasi Siswa ✨
+                        {item.convertedStudentCode ? 'Sinkronkan ✨' : 'Konfirmasi Siswa ✨'}
                       </button>
                     </div>
                   </div>

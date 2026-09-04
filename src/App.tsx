@@ -44,6 +44,8 @@ import {
   normalizeIncomeReceiptNumber,
   synchronizeTutorNames,
   resolveTutorName,
+  deduplicateAttendanceList,
+  findAttendanceDuplicates,
 } from './utils/storage';
 import {
   DEFAULT_USERS,
@@ -99,6 +101,8 @@ import { ReceiptModal } from './components/modals/ReceiptModal';
 import { ConfirmDeleteModal } from './components/modals/ConfirmDeleteModal';
 import { UserAccountModal } from './components/modals/UserAccountModal';
 import { ChangePasswordModal } from './components/modals/ChangePasswordModal';
+import { QRScannerModal } from './components/modals/QRScannerModal';
+import { StudentQRCardModal } from './components/modals/StudentQRCardModal';
 
 // Helper: Ensure accounts have unique usernames and no role collisions (e.g. non-owner cannot have username "owner")
 export const sanitizeAndFixUserAccounts = (
@@ -174,7 +178,11 @@ export default function App() {
 
   // 3. Core Data States (Synced with LocalStorage & Firestore Cloud)
   const [students, setStudents] = useState<Student[]>(() => getInitialStudents());
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>(() => getInitialAttendance());
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>(() => {
+    const raw = getInitialAttendance();
+    const { cleanList } = deduplicateAttendanceList(raw);
+    return cleanList;
+  });
   const [incomes, setIncomes] = useState<IncomeRecord[]>(() => getInitialIncomes());
   const [expenses, setExpenses] = useState<ExpenseRecord[]>(() => getInitialExpenses());
   const [prospectiveStudents, setProspectiveStudents] = useState<ProspectiveStudent[]>(() =>
@@ -221,6 +229,10 @@ export default function App() {
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const [passwordTargetUser, setPasswordTargetUser] = useState<UserAccount | UserSession | undefined>(undefined);
 
+  // QR Attendance Scanner & Student QR Card Modals
+  const [isQRScannerModalOpen, setIsQRScannerModalOpen] = useState(false);
+  const [qrCardStudent, setQrCardStudent] = useState<Student | null>(null);
+
   // Confirm Delete Modal
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
@@ -262,13 +274,6 @@ export default function App() {
           await syncDocToFirestore(COLLECTIONS.SETTINGS, 'default', { id: 'default', ...DEFAULT_SETTINGS });
           console.log('Firestore essential seed completed.');
         } else {
-          // Check prospective students collection
-          const prospectiveCount = await checkCollectionCount(COLLECTIONS.PROSPECTIVE_STUDENTS);
-          if (prospectiveCount === 0) {
-            console.log('Seeding initial prospective students to Firestore...');
-            await batchSeedToFirestore(COLLECTIONS.PROSPECTIVE_STUDENTS, INITIAL_PROSPECTIVE_STUDENTS);
-          }
-
           // If Firestore contains fewer than 25 students or old mock data, update with student list and user accounts
           const studentCount = await checkCollectionCount(COLLECTIONS.STUDENTS);
           if (studentCount < 25) {
@@ -307,8 +312,9 @@ export default function App() {
     const unsubAttendance = subscribeToCollection<AttendanceRecord>(
       COLLECTIONS.ATTENDANCE,
       (cloudData) => {
-        setAttendance(cloudData);
-        saveAttendance(cloudData);
+        const { cleanList } = deduplicateAttendanceList(cloudData);
+        setAttendance(cleanList);
+        saveAttendance(cleanList);
         setIsCloudConnected(true);
       },
       () => setIsCloudConnected(false)
@@ -582,12 +588,16 @@ export default function App() {
       title: 'Hapus Data Siswa',
       message: 'Apakah Anda yakin ingin menghapus data siswa ini? Semua histori presensi terkait akan tetap tersimpan.',
       itemName,
-      onConfirm: () => {
+      onConfirm: async () => {
         const updated = students.filter((s) => s.id !== id);
         setStudents(updated);
         saveStudents(updated);
-        deleteDocFromFirestore(COLLECTIONS.STUDENTS, id).catch(console.error);
         setDeleteDialog((prev) => ({ ...prev, isOpen: false }));
+        try {
+          await deleteDocFromFirestore(COLLECTIONS.STUDENTS, id);
+        } catch (err) {
+          console.error('Gagal menghapus siswa dari Firestore:', err);
+        }
         showToast(`Siswa "${itemName}" telah berhasil dihapus.`);
       },
     });
@@ -650,40 +660,69 @@ export default function App() {
       title: 'Hapus Data Calon Siswa (PPDB)',
       message: 'Apakah Anda yakin ingin menghapus data calon siswa ini dari daftar pendaftaran PPDB?',
       itemName,
-      onConfirm: () => {
+      onConfirm: async () => {
         const updated = prospectiveStudents.filter((p) => p.id !== id);
         setProspectiveStudents(updated);
         saveProspectiveStudents(updated);
-        deleteDocFromFirestore(COLLECTIONS.PROSPECTIVE_STUDENTS, id).catch(console.error);
         setDeleteDialog((prev) => ({ ...prev, isOpen: false }));
+        try {
+          await deleteDocFromFirestore(COLLECTIONS.PROSPECTIVE_STUDENTS, id);
+        } catch (err) {
+          console.error('Gagal menghapus calon siswa dari Firestore:', err);
+        }
         showToast(`Data pendaftar "${itemName}" telah dihapus.`);
       },
     });
   };
 
   const handleConvertToStudent = (newStudent: Student, updatedProspective: ProspectiveStudent) => {
-    // 1. Save new student to students state & cloud
-    const studentExists = students.some((s) => s.id === newStudent.id);
-    const updatedStudentsList = studentExists
-      ? students.map((s) => (s.id === newStudent.id ? newStudent : s))
-      : [newStudent, ...students];
+    // 1. Identify if student already exists by ID, or by convertedStudentId, or by Code, or by exact Name + Phone
+    const existingIndex = students.findIndex(
+      (s) =>
+        s.id === newStudent.id ||
+        (updatedProspective.convertedStudentId && s.id === updatedProspective.convertedStudentId) ||
+        s.code.toUpperCase() === newStudent.code.toUpperCase() ||
+        (s.name.trim().toLowerCase() === newStudent.name.trim().toLowerCase() &&
+          s.parentPhone.replace(/\D/g, '') === newStudent.parentPhone.replace(/\D/g, '') &&
+          newStudent.parentPhone.trim().length > 5)
+    );
+
+    let updatedStudentsList: Student[];
+    let finalStudent: Student;
+
+    if (existingIndex !== -1) {
+      const existing = students[existingIndex];
+      finalStudent = {
+        ...existing,
+        ...newStudent,
+        id: existing.id,
+        status: 'Aktif',
+      };
+      updatedStudentsList = students.map((s, idx) => (idx === existingIndex ? finalStudent : s));
+    } else {
+      finalStudent = newStudent;
+      updatedStudentsList = [newStudent, ...students];
+    }
+
     setStudents(updatedStudentsList);
     saveStudents(updatedStudentsList);
-    syncDocToFirestore(COLLECTIONS.STUDENTS, newStudent.id, newStudent).catch(console.error);
+    syncDocToFirestore(COLLECTIONS.STUDENTS, finalStudent.id, finalStudent).catch(console.error);
 
-    // 2. Auto-create student portal account if doesn't exist yet
+    // 2. Auto-create or update student portal account
     const existingAcc = users.find(
-      (u) => u.linkedStudentId === newStudent.id || u.username.toLowerCase() === newStudent.code.toLowerCase()
+      (u) =>
+        u.linkedStudentId === finalStudent.id ||
+        u.username.toLowerCase() === finalStudent.code.toLowerCase()
     );
     if (!existingAcc) {
       const newStudentAccount: UserAccount = {
-        id: `usr-${newStudent.id}`,
-        username: newStudent.code.toLowerCase(),
+        id: `usr-${finalStudent.id}`,
+        username: finalStudent.code.toLowerCase(),
         password: '123',
-        name: newStudent.name,
+        name: finalStudent.name,
         role: 'siswa',
-        code: newStudent.code,
-        linkedStudentId: newStudent.id,
+        code: finalStudent.code,
+        linkedStudentId: finalStudent.id,
         isActive: true,
         createdAt: new Date().toISOString(),
       };
@@ -691,15 +730,40 @@ export default function App() {
       setUsers(updatedUsersList);
       saveUsers(updatedUsersList);
       syncDocToFirestore(COLLECTIONS.USERS, newStudentAccount.id, newStudentAccount).catch(console.error);
+    } else {
+      const updatedAccount: UserAccount = {
+        ...existingAcc,
+        name: finalStudent.name,
+        code: finalStudent.code,
+        username: finalStudent.code.toLowerCase(),
+        isActive: true,
+      };
+      const updatedUsersList = users.map((u) => (u.id === existingAcc.id ? updatedAccount : u));
+      setUsers(updatedUsersList);
+      saveUsers(updatedUsersList);
+      syncDocToFirestore(COLLECTIONS.USERS, updatedAccount.id, updatedAccount).catch(console.error);
     }
 
-    // 3. Update prospective student record with status 'Diterima' and linked student ID
-    const updatedProspList = prospectiveStudents.map((p) => (p.id === updatedProspective.id ? updatedProspective : p));
+    // 3. Update prospective student record with status 'Diterima' and linked student ID & Code
+    const finalizedProspective: ProspectiveStudent = {
+      ...updatedProspective,
+      status: 'Diterima',
+      convertedStudentId: finalStudent.id,
+      convertedStudentCode: finalStudent.code,
+    };
+
+    const updatedProspList = prospectiveStudents.map((p) =>
+      p.id === finalizedProspective.id ? finalizedProspective : p
+    );
     setProspectiveStudents(updatedProspList);
     saveProspectiveStudents(updatedProspList);
-    syncDocToFirestore(COLLECTIONS.PROSPECTIVE_STUDENTS, updatedProspective.id, updatedProspective).catch(console.error);
+    syncDocToFirestore(COLLECTIONS.PROSPECTIVE_STUDENTS, finalizedProspective.id, finalizedProspective).catch(console.error);
 
-    showToast(`🎉 ${newStudent.name} (${newStudent.code}) resmi diterima menjadi Siswa Bimbel Sigma! Akun login: @${newStudent.code.toLowerCase()} (Pass: 123)`);
+    showToast(
+      existingIndex !== -1
+        ? `✨ Data ${finalStudent.name} (${finalStudent.code}) di Database Siswa berhasil disinkronkan!`
+        : `🎉 ${finalStudent.name} (${finalStudent.code}) resmi diterima menjadi Siswa Bimbel Sigma! Akun login: @${finalStudent.code.toLowerCase()} (Pass: 123)`
+    );
   };
 
   const handleResetProspectiveMockData = () => {
@@ -728,41 +792,109 @@ export default function App() {
     setIsAttendanceModalOpen(true);
   };
 
+  // Helper to reliably match an existing attendance record for a student on a specific date
+  const findMatchingAttendanceRecord = (
+    records: AttendanceRecord[],
+    studentInfo: { id?: string; code?: string; name?: string },
+    date: string
+  ): AttendanceRecord | undefined => {
+    const sId = (studentInfo.id || '').trim();
+    const sCode = (studentInfo.code || '').trim().toUpperCase();
+    const sName = (studentInfo.name || '').trim().toLowerCase();
+
+    return records.find((a) => {
+      if (a.date !== date) return false;
+      if (sId && a.studentId && a.studentId.trim() === sId) return true;
+      if (sCode && a.studentCode && a.studentCode.trim().toUpperCase() === sCode) return true;
+      if (sName && a.studentName && a.studentName.trim().toLowerCase() === sName) return true;
+      return false;
+    });
+  };
+
   const handleSaveAttendance = (
     data: Omit<AttendanceRecord, 'id' | 'createdAt'> & { id?: string }
   ) => {
-    if (data.id) {
-      const updated = attendance.map((a) => (a.id === data.id ? { ...a, ...data } : a));
-      setAttendance(updated);
-      saveAttendance(updated);
-      const targetObj = updated.find((a) => a.id === data.id)!;
-      syncDocToFirestore(COLLECTIONS.ATTENDANCE, data.id, targetObj).catch(console.error);
-      showToast(`Data presensi "${data.studentName}" berhasil diperbarui.`);
-    } else {
-      const newRecord: AttendanceRecord = {
-        ...data,
-        id: `att-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-      };
-      const updated = [newRecord, ...attendance];
-      setAttendance(updated);
-      saveAttendance(updated);
-      syncDocToFirestore(COLLECTIONS.ATTENDANCE, newRecord.id, newRecord).catch(console.error);
-      showToast(`Presensi "${data.studentName}" [${data.status}] berhasil disimpan.`);
-    }
+    setAttendance((prevAttendance) => {
+      if (data.id) {
+        const updated = prevAttendance.map((a) => (a.id === data.id ? { ...a, ...data } : a));
+        saveAttendance(updated);
+        const targetObj = updated.find((a) => a.id === data.id);
+        if (targetObj) {
+          syncDocToFirestore(COLLECTIONS.ATTENDANCE, data.id, targetObj).catch(console.error);
+        }
+        showToast(`Data presensi "${data.studentName}" berhasil diperbarui.`);
+        return updated;
+      } else {
+        // Prevent double attendance on the same date
+        const existing = findMatchingAttendanceRecord(
+          prevAttendance,
+          { id: data.studentId, code: data.studentCode, name: data.studentName },
+          data.date
+        );
+
+        if (existing) {
+          const updatedRecord: AttendanceRecord = {
+            ...existing,
+            ...data,
+            id: existing.id,
+          };
+          const updated = prevAttendance.map((a) => (a.id === existing.id ? updatedRecord : a));
+          saveAttendance(updated);
+          syncDocToFirestore(COLLECTIONS.ATTENDANCE, existing.id, updatedRecord).catch(console.error);
+          showToast(`Presensi "${data.studentName}" tanggal ${data.date} sudah ada, data diperbarui.`);
+          return updated;
+        } else {
+          const newRecord: AttendanceRecord = {
+            ...data,
+            id: `att-${Date.now()}`,
+            createdAt: new Date().toISOString(),
+          };
+          const updated = [newRecord, ...prevAttendance];
+          saveAttendance(updated);
+          syncDocToFirestore(COLLECTIONS.ATTENDANCE, newRecord.id, newRecord).catch(console.error);
+          showToast(`Presensi "${data.studentName}" [${data.status}] berhasil disimpan.`);
+          return updated;
+        }
+      }
+    });
   };
 
   const handleBatchAttendance = (newRecords: Omit<AttendanceRecord, 'id' | 'createdAt'>[]) => {
-    const createdList: AttendanceRecord[] = newRecords.map((r, i) => ({
-      ...r,
-      id: `att-${Date.now()}-${i}`,
-      createdAt: new Date().toISOString(),
-    }));
-    const updated = [...createdList, ...attendance];
-    setAttendance(updated);
-    saveAttendance(updated);
-    batchSeedToFirestore(COLLECTIONS.ATTENDANCE, createdList).catch(console.error);
-    showToast(`Presensi batch ${createdList.length} siswa berhasil disimpan!`);
+    setAttendance((prevAttendance) => {
+      let currentList = [...prevAttendance];
+      const recordsToSync: AttendanceRecord[] = [];
+
+      newRecords.forEach((item, i) => {
+        const existing = findMatchingAttendanceRecord(
+          currentList,
+          { id: item.studentId, code: item.studentCode, name: item.studentName },
+          item.date
+        );
+
+        if (existing) {
+          const updatedRecord: AttendanceRecord = {
+            ...existing,
+            ...item,
+            id: existing.id,
+          };
+          currentList = currentList.map((a) => (a.id === existing.id ? updatedRecord : a));
+          recordsToSync.push(updatedRecord);
+        } else {
+          const newRecord: AttendanceRecord = {
+            ...item,
+            id: `att-${Date.now()}-${i}`,
+            createdAt: new Date().toISOString(),
+          };
+          currentList = [newRecord, ...currentList];
+          recordsToSync.push(newRecord);
+        }
+      });
+
+      saveAttendance(currentList);
+      batchSeedToFirestore(COLLECTIONS.ATTENDANCE, recordsToSync).catch(console.error);
+      showToast(`Presensi batch ${newRecords.length} siswa berhasil diproses tanpa duplikasi!`);
+      return currentList;
+    });
   };
 
   const handleSelfAttendance = (
@@ -773,45 +905,113 @@ export default function App() {
     tutorName?: string
   ) => {
     const todayStr = getTodayDateString();
-    const existing = attendance.find(
-      (a) => a.studentId === student.id && a.date === todayStr
-    );
+    const effectiveTutor = tutorName || student.tutorName || settings.ownerName || 'Nanik Susilowati, M.Pd';
 
-    if (existing) {
-      const updatedRecord = {
-        ...existing,
-        time,
-        status: 'Hadir' as const,
-        topic: topic || existing.topic,
-        tutorNotes: notes ? `[Siswa]: ${notes}` : existing.tutorNotes,
-        tutorName: tutorName || existing.tutorName,
-      };
-      const updated = attendance.map((a) => (a.id === existing.id ? updatedRecord : a));
-      setAttendance(updated);
-      saveAttendance(updated);
-      syncDocToFirestore(COLLECTIONS.ATTENDANCE, existing.id, updatedRecord).catch(console.error);
-      showToast(`Absen mandiri diperbarui pada pukul ${time}`);
-    } else {
-      const newRecord: AttendanceRecord = {
-        id: `att-self-${Date.now()}`,
-        date: todayStr,
-        time,
-        studentId: student.id,
-        studentCode: student.code,
-        studentName: student.name,
-        classType: student.classType,
-        status: 'Hadir',
-        topic: topic || 'Belajar Mandiri & Pendalaman Materi',
-        tutorNotes: notes ? `[Absen Mandiri Siswa]: ${notes}` : 'Hadir mandiri melalui portal siswa',
-        tutorName: tutorName || student.tutorName || settings.ownerName || 'Nanik Susilowati, M.Pd',
-        createdAt: new Date().toISOString(),
-      };
-      const updated = [newRecord, ...attendance];
-      setAttendance(updated);
-      saveAttendance(updated);
-      syncDocToFirestore(COLLECTIONS.ATTENDANCE, newRecord.id, newRecord).catch(console.error);
-      showToast(`Berhasil Absen Masuk! Data tersimpan di Cloud.`);
-    }
+    setAttendance((prevAttendance) => {
+      const existing = findMatchingAttendanceRecord(prevAttendance, student, todayStr);
+
+      if (existing) {
+        const updatedRecord = {
+          ...existing,
+          time,
+          status: 'Hadir' as const,
+          topic: topic || existing.topic,
+          tutorNotes: notes ? `[Siswa]: ${notes}` : existing.tutorNotes,
+          tutorName: effectiveTutor,
+        };
+        const updated = prevAttendance.map((a) => (a.id === existing.id ? updatedRecord : a));
+        saveAttendance(updated);
+        syncDocToFirestore(COLLECTIONS.ATTENDANCE, existing.id, updatedRecord).catch(console.error);
+        showToast(`Absen mandiri ${student.name} diperbarui pada pukul ${time}`);
+        return updated;
+      } else {
+        const newRecord: AttendanceRecord = {
+          id: `att-self-${Date.now()}`,
+          date: todayStr,
+          time,
+          studentId: student.id,
+          studentCode: student.code,
+          studentName: student.name,
+          classType: student.classType,
+          status: 'Hadir',
+          topic: topic || 'Belajar Mandiri & Pendalaman Materi',
+          tutorNotes: notes ? `[Absen Mandiri Siswa]: ${notes}` : 'Hadir mandiri melalui portal siswa',
+          tutorName: effectiveTutor,
+          createdAt: new Date().toISOString(),
+        };
+        const updated = [newRecord, ...prevAttendance];
+        saveAttendance(updated);
+        syncDocToFirestore(COLLECTIONS.ATTENDANCE, newRecord.id, newRecord).catch(console.error);
+        showToast(`Berhasil Absen Masuk! Data tersimpan di Cloud.`);
+        return updated;
+      }
+    });
+  };
+
+  const handleQRScanAttendance = (
+    student: Student,
+    topic: string,
+    notes: string,
+    time: string
+  ) => {
+    const todayStr = getTodayDateString();
+    const effectiveTutor = currentUser?.name || student.tutorName || settings.ownerName || 'Nanik Susilowati, M.Pd';
+    const cleanTime = time || `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
+
+    setAttendance((prevAttendance) => {
+      const existing = findMatchingAttendanceRecord(prevAttendance, student, todayStr);
+
+      if (existing) {
+        const updatedRecord: AttendanceRecord = {
+          ...existing,
+          time: cleanTime,
+          status: 'Hadir',
+          topic: topic || existing.topic,
+          tutorNotes: notes ? `[Scan QR]: ${notes}` : (existing.tutorNotes || 'Presensi via Scan QR Pelajar'),
+          tutorName: effectiveTutor,
+        };
+        const updated = prevAttendance.map((a) => (a.id === existing.id ? updatedRecord : a));
+        saveAttendance(updated);
+        syncDocToFirestore(COLLECTIONS.ATTENDANCE, existing.id, updatedRecord).catch(console.error);
+        showToast(`Presensi ${student.name} diperbarui pukul ${cleanTime}`);
+        return updated;
+      } else {
+        const newRecord: AttendanceRecord = {
+          id: `att-qr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          date: todayStr,
+          time: cleanTime,
+          studentId: student.id,
+          studentCode: student.code,
+          studentName: student.name,
+          classType: student.classType,
+          status: 'Hadir',
+          topic: topic || 'Bimbingan Belajar & Latihan Soal Harian',
+          tutorNotes: notes ? `[Scan QR Presensi]: ${notes}` : 'Presensi via Scan QR Pelajar',
+          tutorName: effectiveTutor,
+          createdAt: new Date().toISOString(),
+        };
+        const updated = [newRecord, ...prevAttendance];
+        saveAttendance(updated);
+        syncDocToFirestore(COLLECTIONS.ATTENDANCE, newRecord.id, newRecord).catch(console.error);
+        showToast(`✅ Absen Hadir: ${student.name} (${student.code}) pukul ${newRecord.time}`);
+        return updated;
+      }
+    });
+  };
+
+  // Helper to purge any legacy duplicate attendance records across the system
+  const handleDeduplicateAttendance = () => {
+    setAttendance((prevAttendance) => {
+      const { cleanList, removedCount } = deduplicateAttendanceList(prevAttendance);
+      if (removedCount > 0) {
+        saveAttendance(cleanList);
+        replaceAllInCollection(COLLECTIONS.ATTENDANCE, cleanList).catch(console.error);
+        showToast(`Berhasil membersihkan ${removedCount} data presensi ganda/duplikat!`);
+      } else {
+        showToast('Tidak ada data presensi ganda yang ditemukan.');
+      }
+      return cleanList;
+    });
   };
 
   const handleDeleteAttendance = (recordOrId: AttendanceRecord | string, customName?: string) => {
@@ -1467,6 +1667,7 @@ export default function App() {
               onOpenExpenseModal={() => handleOpenExpenseModal()}
               onOpenChangePasswordModal={() => handleOpenChangePasswordModal(currentUser)}
               onDeleteAttendance={handleDeleteAttendance}
+              onOpenQRScanner={() => setIsQRScannerModalOpen(true)}
             />
           )}
 
@@ -1482,6 +1683,7 @@ export default function App() {
               onDeleteAttendance={handleDeleteAttendance}
               onNavigate={setCurrentTab}
               onOpenChangePasswordModal={() => handleOpenChangePasswordModal(currentUser)}
+              onOpenQRScanner={() => setIsQRScannerModalOpen(true)}
             />
           )}
 
@@ -1496,6 +1698,7 @@ export default function App() {
               onOpenSelfAttendanceModal={() => setIsSelfAttendanceModalOpen(true)}
               onNavigate={setCurrentTab}
               onOpenChangePasswordModal={() => handleOpenChangePasswordModal(currentUser)}
+              onOpenQRCard={(student) => setQrCardStudent(student)}
             />
           )}
 
@@ -1508,6 +1711,7 @@ export default function App() {
               onOpenStudentModal={handleOpenStudentModal}
               onDeleteStudent={handleDeleteStudent}
               onResetStudents={handleResetToScreenshotStudents}
+              onOpenQRCard={(student) => setQrCardStudent(student)}
             />
           )}
 
@@ -1541,6 +1745,8 @@ export default function App() {
               onOpenAttendanceModal={handleOpenAttendanceModal}
               onOpenBatchAttendanceModal={() => setIsBatchAttendanceModalOpen(true)}
               onDeleteAttendance={handleDeleteAttendance}
+              onOpenQRScanner={() => setIsQRScannerModalOpen(true)}
+              onDeduplicateAttendance={handleDeduplicateAttendance}
             />
           )}
 
@@ -1781,6 +1987,26 @@ export default function App() {
         }}
         targetUser={passwordTargetUser}
         onSavePassword={handleSavePassword}
+      />
+
+      {/* 11. QR Attendance Scanner Modal (For Owner, Tutor) */}
+      <QRScannerModal
+        isOpen={isQRScannerModalOpen}
+        onClose={() => setIsQRScannerModalOpen(false)}
+        students={students}
+        attendance={attendance}
+        currentUserName={currentUser.name}
+        users={users}
+        settings={settings}
+        onSaveAttendance={handleQRScanAttendance}
+      />
+
+      {/* 12. Student QR Badge Modal (Single preview, download & print) */}
+      <StudentQRCardModal
+        isOpen={Boolean(qrCardStudent)}
+        onClose={() => setQrCardStudent(null)}
+        student={qrCardStudent}
+        settings={settings}
       />
     </div>
   );

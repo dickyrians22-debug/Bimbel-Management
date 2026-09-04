@@ -25,7 +25,11 @@ import {
   RotateCcw,
   Check,
   X,
+  QrCode,
+  Scissors,
 } from 'lucide-react';
+import { QRCodeCanvas } from 'qrcode.react';
+import { UserAvatar } from '../common/UserAvatar';
 import {
   Student,
   AttendanceRecord,
@@ -75,8 +79,8 @@ export const PrintCardsView: React.FC<PrintCardsViewProps> = ({
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
 
-  // Mode Tab: 'mode-a' (Laporan Siswa) vs 'mode-b' (Rekap Presensi Bulanan)
-  const [activeMode, setActiveMode] = useState<'mode-a' | 'mode-b'>('mode-a');
+  // Mode Tab: 'mode-a' (Laporan Siswa) vs 'mode-b' (Rekap Presensi Bulanan) vs 'mode-c' (Kartu ID & QR Siswa)
+  const [activeMode, setActiveMode] = useState<'mode-a' | 'mode-b' | 'mode-c'>('mode-a');
 
   // Common filters
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
@@ -101,6 +105,19 @@ export const PrintCardsView: React.FC<PrintCardsViewProps> = ({
   const [matrixFilterTutor, setMatrixFilterTutor] = useState<string>('Semua');
   const [matrixFilterStatus, setMatrixFilterStatus] = useState<'Aktif' | 'Semua'>('Aktif');
   const [matrixSearchTerm, setMatrixSearchTerm] = useState<string>('');
+
+  // --- MODE C (KARTU PELAJAR & QR SISWA) STATES & FILTERS ---
+  const [modeCSelection, setModeCSelection] = useState<'all' | 'single'>('all');
+  const [modeCSelectedStudentId, setModeCSelectedStudentId] = useState<string>(() => {
+    if (userRole === 'siswa' && currentStudentCode) {
+      const match = students.find((s) => s.code === currentStudentCode);
+      return match ? match.id : students[0]?.id || '';
+    }
+    return students[0]?.id || '';
+  });
+  const [modeCFilterLevel, setModeCFilterLevel] = useState<string>('Semua');
+  const [modeCFilterStatus, setModeCFilterStatus] = useState<string>('Aktif');
+  const [modeCLayout, setModeCLayout] = useState<'grid-8' | 'grid-4' | 'single-large'>('grid-8');
 
   // --- CUSTOM EVALUATION / REKOMENDASI PENGAJAR (OWNER & TUTOR ONLY) ---
   const [customEvaluations, setCustomEvaluations] = useState<Record<string, string>>(() => {
@@ -295,6 +312,23 @@ export const PrintCardsView: React.FC<PrintCardsViewProps> = ({
     return { hadir, izin, sakit, alpha, totalSessions, avgPercentage };
   }, [attendanceMatrixData]);
 
+  // Filtered Students for Mode C (Kartu ID & QR Siswa)
+  const modeCFilteredStudents = useMemo(() => {
+    if (userRole === 'siswa' && currentStudentCode) {
+      const self = students.find((s) => s.code === currentStudentCode);
+      return self ? [self] : [];
+    }
+    if (modeCSelection === 'single') {
+      const single = students.find((s) => s.id === modeCSelectedStudentId);
+      return single ? [single] : [];
+    }
+    return students.filter((s) => {
+      const matchLevel = modeCFilterLevel === 'Semua' || s.level === modeCFilterLevel;
+      const matchStatus = modeCFilterStatus === 'Semua' || s.status === modeCFilterStatus;
+      return matchLevel && matchStatus;
+    });
+  }, [students, userRole, currentStudentCode, modeCSelection, modeCSelectedStudentId, modeCFilterLevel, modeCFilterStatus]);
+
   const [isExportingPng, setIsExportingPng] = useState<boolean>(false);
 
   // Export Matrix to Excel (.xlsx)
@@ -323,9 +357,12 @@ export const PrintCardsView: React.FC<PrintCardsViewProps> = ({
         const studentName = selectedStudent?.name?.replace(/\s+/g, '_') || 'Siswa';
         const fileName = `Kartu_Presensi_${studentName}_${monthName}_${selectedYear}`;
         await exportElementToPng(targetId, fileName);
-      } else {
+      } else if (activeMode === 'mode-b') {
         const fileName = `Rekap_Presensi_Matriks_${monthName}_${selectedYear}_${bimbelName.replace(/\s+/g, '_')}`;
         await exportElementToPng('printable-group-sheet', fileName);
+      } else {
+        const fileName = `Kartu_QR_Presensi_${modeCSelection === 'single' ? (modeCFilteredStudents[0]?.name?.replace(/\s+/g, '_') || 'Siswa') : 'Batch'}`;
+        await exportElementToPng('printable-qr-cards-container', fileName);
       }
     } catch (err) {
       console.error('Error exporting PNG:', err);
@@ -543,28 +580,39 @@ export const PrintCardsView: React.FC<PrintCardsViewProps> = ({
 
         {/* MODE TABS SELECTION (Only visible for admin/owner/tutor - hidden for student) */}
         {userRole !== 'siswa' ? (
-          <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl max-w-xl">
+          <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl max-w-2xl">
             <button
               onClick={() => setActiveMode('mode-a')}
-              className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer ${
+              className={`flex-1 py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                 activeMode === 'mode-a'
                   ? 'bg-white text-indigo-900 shadow-sm border border-slate-200'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <User className="w-4 h-4 text-indigo-600" />
+              <User className="w-4 h-4 text-indigo-600 shrink-0" />
               <span>Laporan Siswa</span>
             </button>
             <button
               onClick={() => setActiveMode('mode-b')}
-              className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer ${
+              className={`flex-1 py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                 activeMode === 'mode-b'
                   ? 'bg-white text-indigo-900 shadow-sm border border-slate-200'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Grid className="w-4 h-4 text-emerald-600" />
+              <Grid className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>Rekap Presensi</span>
+            </button>
+            <button
+              onClick={() => setActiveMode('mode-c')}
+              className={`flex-1 py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                activeMode === 'mode-c'
+                  ? 'bg-white text-indigo-900 shadow-sm border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <QrCode className="w-4 h-4 text-purple-600 shrink-0" />
+              <span>Kartu ID & QR Siswa</span>
             </button>
           </div>
         ) : (
@@ -781,6 +829,97 @@ export const PrintCardsView: React.FC<PrintCardsViewProps> = ({
           </div>
         )}
 
+        {/* FILTER CONTROLS FOR KARTU ID & QR (MODE C) */}
+        {activeMode === 'mode-c' && (
+          <div className="space-y-3 pt-3 border-t border-slate-100">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Pilihan: Cetak Semua Siswa vs Satu Siswa */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                  Cakupan Siswa:
+                </label>
+                <select
+                  value={modeCSelection}
+                  onChange={(e) => setModeCSelection(e.target.value as 'all' | 'single')}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="all">👥 Cetak Semua Siswa (Batch)</option>
+                  <option value="single">👤 Satu Siswa Tertentu</option>
+                </select>
+              </div>
+
+              {/* Jika Satu Siswa: dropdown pilih nama */}
+              {modeCSelection === 'single' ? (
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                    Pilih Siswa:
+                  </label>
+                  <select
+                    value={modeCSelectedStudentId}
+                    onChange={(e) => setModeCSelectedStudentId(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500"
+                  >
+                    {students.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.code} - {s.name} ({s.gradeDetail})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                /* Jika Semua: Filter Jenjang */
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                    Filter Jenjang:
+                  </label>
+                  <select
+                    value={modeCFilterLevel}
+                    onChange={(e) => setModeCFilterLevel(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="Semua">Semua Jenjang ({students.length} Siswa)</option>
+                    <option value="SD">SD</option>
+                    <option value="SMP">SMP</option>
+                    <option value="SMA">SMA</option>
+                    <option value="Alumni / Kedinasan">Alumni / Kedinasan</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Filter Status Siswa */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                  Status Siswa:
+                </label>
+                <select
+                  value={modeCFilterStatus}
+                  onChange={(e) => setModeCFilterStatus(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="Aktif">Hanya Siswa Aktif</option>
+                  <option value="Semua">Semua Status</option>
+                </select>
+              </div>
+
+              {/* Format Layout Lembar Kartu */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                  Layout Cetak:
+                </label>
+                <select
+                  value={modeCLayout}
+                  onChange={(e) => setModeCLayout(e.target.value as any)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="grid-8">📄 8 Kartu / Lembar A4 (Siap Potong)</option>
+                  <option value="grid-4">📑 4 Kartu / Lembar A4 (Sedang)</option>
+                  <option value="single-large">🗂️ 1 Kartu ID Card Besar</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Status Notification */}
         <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-2xl flex items-center justify-between text-xs text-indigo-900">
           <div className="flex items-center gap-2">
@@ -792,16 +931,23 @@ export const PrintCardsView: React.FC<PrintCardsViewProps> = ({
                   <strong>{selectedStudent?.name}</strong> pada bulan{' '}
                   {MONTH_NAMES_ID[selectedMonth - 1]} {selectedYear} ({studentRecords.length} Sesi Terdata).
                 </span>
-              ) : (
+              ) : activeMode === 'mode-b' ? (
                 <span>
                   <strong>Rekap Presensi:</strong> Matriks kehadiran bulanan (Tgl 1 s.d. {daysInMonth}) untuk{' '}
                   <strong>{filteredMatrixStudents.length} Siswa</strong>.
+                </span>
+              ) : (
+                <span>
+                  <strong>Kartu ID & QR Pelajar:</strong> Siap cetak{' '}
+                  <strong>{modeCFilteredStudents.length} Kartu Siswa</strong> dengan QR Code scannable presensi kilat.
                 </span>
               )}
             </span>
           </div>
           <span className="font-mono font-bold text-indigo-700 whitespace-nowrap ml-2">
-            Periode: {MONTH_NAMES_ID[selectedMonth - 1]} {selectedYear}
+            {activeMode === 'mode-c'
+              ? `${modeCFilteredStudents.length} Kartu Pelajar`
+              : `Periode: ${MONTH_NAMES_ID[selectedMonth - 1]} ${selectedYear}`}
           </span>
         </div>
       </div>
@@ -1597,6 +1743,226 @@ export const PrintCardsView: React.FC<PrintCardsViewProps> = ({
                 </p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* MODE C: KARTU ID & QR PELAJAR (SINGLE & BATCH GRID SHEET)                */}
+        {/* ========================================================================= */}
+        {activeMode === 'mode-c' && (
+          <div id="printable-qr-cards-container" className="w-full flex flex-col items-center gap-6">
+            {modeCFilteredStudents.length === 0 ? (
+              <div className="bg-white p-10 rounded-2xl text-center max-w-md shadow border border-slate-200">
+                <QrCode className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                <h3 className="font-bold text-slate-800 text-sm">Tidak ada siswa yang sesuai filter</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Ubah filter jenjang atau status untuk menampilkan kartu pelajar.
+                </p>
+              </div>
+            ) : modeCLayout === 'single-large' ? (
+              /* SINGLE LARGE ID CARD VIEW */
+              <div className="w-full flex flex-col items-center gap-6">
+                {modeCFilteredStudents.map((std) => {
+                  const qrPayload = `SIGMA:STUDENT:${std.code}`;
+
+                  return (
+                    <div
+                      key={std.id}
+                      className="bg-white shadow-2xl print:shadow-none w-full max-w-[130mm] rounded-3xl overflow-hidden border-2 border-slate-300 print:border-slate-800 font-sans text-slate-800 my-2 print:my-0 break-after-page"
+                    >
+                      {/* Card Header */}
+                      <div className="bg-gradient-to-r from-indigo-950 via-indigo-900 to-indigo-800 p-5 text-white flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-white text-indigo-950 font-black text-xl flex items-center justify-center font-heading shrink-0 shadow">
+                            Σ
+                          </div>
+                          <div>
+                            <h2 className="font-black text-base tracking-wide font-heading uppercase leading-tight">
+                              {bimbelName}
+                            </h2>
+                            <p className="text-[10px] text-indigo-200 tracking-wider font-medium">
+                              KARTU TANDA PELAJAR & PRESENSI
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right text-[10px] text-indigo-200 font-mono">
+                          NIS: <span className="font-bold text-white">{std.code}</span>
+                        </div>
+                      </div>
+
+                      {/* Card Body */}
+                      <div className="p-6 bg-slate-50/50 flex flex-col items-center text-center space-y-4">
+                        {/* Student Photo & Name */}
+                        <div className="flex flex-col items-center">
+                          <UserAvatar
+                            name={std.name}
+                            role="siswa"
+                            size="lg"
+                            className="w-16 h-16 rounded-2xl shadow-md border-2 border-white ring-2 ring-indigo-200"
+                          />
+                          <h3 className="font-extrabold text-slate-900 text-base mt-2">{std.name}</h3>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 font-bold rounded-md text-[10px]">
+                              {std.level} • {std.gradeDetail}
+                            </span>
+                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-md text-[10px]">
+                              Kelas {std.classType}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Large Scannable QR Code */}
+                        <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center">
+                          <QRCodeCanvas
+                            value={qrPayload}
+                            size={160}
+                            level="H"
+                            includeMargin={false}
+                          />
+                          <p className="font-mono text-xs font-black text-slate-700 mt-2 tracking-wider">
+                            {std.code}
+                          </p>
+                        </div>
+
+                        {/* Scan Instruction */}
+                        <div className="p-2.5 bg-indigo-50/80 rounded-xl border border-indigo-100/90 text-indigo-950 text-[11px] font-medium max-w-xs">
+                          Tunjukkan QR ini kepada Tutor atau Owner saat tiba di bimbingan belajar untuk presensi otomatis.
+                        </div>
+                      </div>
+
+                      {/* Card Footer */}
+                      <div className="bg-slate-100 border-t border-slate-200 px-5 py-3 flex items-center justify-between text-[10px] text-slate-600">
+                        <span>Tutor: <strong>{std.tutorName || effectiveOwnerName}</strong></span>
+                        <span>{effectiveCity} • {bimbelTagline}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* BATCH A4 GRID PRINTABLE (8 or 4 Cards per A4 Page) */
+              (() => {
+                const perPage = modeCLayout === 'grid-4' ? 4 : 8;
+                const pages: Student[][] = [];
+                for (let i = 0; i < modeCFilteredStudents.length; i += perPage) {
+                  pages.push(modeCFilteredStudents.slice(i, i + perPage));
+                }
+
+                return pages.map((pageStudents, pageIndex) => (
+                  <div
+                    key={`qr-page-${pageIndex}`}
+                    className="bg-white shadow-2xl print:shadow-none w-full max-w-[210mm] min-h-[297mm] p-6 text-slate-800 flex flex-col justify-between border border-slate-300 print:border-none print:m-0 font-sans break-after-page"
+                  >
+                    {/* Page Header (Informational) */}
+                    <div className="border-b border-slate-200 pb-2 mb-4 flex items-center justify-between text-xs text-slate-500">
+                      <div className="flex items-center gap-2 font-bold text-slate-800">
+                        <span className="w-5 h-5 rounded-md bg-indigo-900 text-white flex items-center justify-center font-black text-[11px]">
+                          Σ
+                        </span>
+                        <span>Lembar Kartu Presensi Pelajar — {bimbelName}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span>Halaman {pageIndex + 1} dari {pages.length}</span>
+                        <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded font-mono">
+                          {modeCLayout === 'grid-4' ? '4 Kartu/A4' : '8 Kartu/A4'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Cards Grid */}
+                    <div
+                      className={`grid gap-4 flex-1 ${
+                        modeCLayout === 'grid-4'
+                          ? 'grid-cols-2 grid-rows-2'
+                          : 'grid-cols-2 grid-rows-4'
+                      }`}
+                    >
+                      {pageStudents.map((std) => {
+                        const qrPayload = `SIGMA:STUDENT:${std.code}`;
+
+                        return (
+                          <div
+                            key={std.id}
+                            className={`border-2 border-dashed border-slate-300 rounded-2xl p-3 bg-white flex flex-col justify-between relative hover:border-indigo-400 transition ${
+                              modeCLayout === 'grid-4' ? 'p-4' : 'p-3'
+                            }`}
+                          >
+                            {/* Card Top Mini Header */}
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-1.5 mb-2">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-4 h-4 rounded bg-indigo-950 text-white font-black text-[10px] flex items-center justify-center">
+                                  Σ
+                                </span>
+                                <span className="font-extrabold text-[11px] text-indigo-950 font-heading tracking-tight uppercase truncate max-w-[130px]">
+                                  {bimbelName}
+                                </span>
+                              </div>
+                              <span className="font-mono text-[10px] font-bold text-indigo-700">
+                                {std.code}
+                              </span>
+                            </div>
+
+                            {/* Card Content (Avatar + Details on Left, QR on Right) */}
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <UserAvatar
+                                    name={std.name}
+                                    role="siswa"
+                                    size="sm"
+                                    className="w-8 h-8 rounded-lg shrink-0 border border-slate-200"
+                                  />
+                                  <div className="min-w-0">
+                                    <h4 className="font-black text-xs text-slate-900 truncate leading-tight">
+                                      {std.name}
+                                    </h4>
+                                    <p className="text-[10px] font-bold text-indigo-600">
+                                      {std.level} • {std.gradeDetail}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="space-y-0.5 text-[9px] text-slate-500">
+                                  <p>Kelas: <strong className="text-slate-700">{std.classType}</strong></p>
+                                  <p className="truncate">
+                                    Tutor: <strong className="text-slate-700">{std.tutorName || effectiveOwnerName}</strong>
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* QR Code */}
+                              <div className="p-1.5 bg-slate-50 rounded-xl border border-slate-200 shrink-0 flex flex-col items-center">
+                                <QRCodeCanvas
+                                  value={qrPayload}
+                                  size={modeCLayout === 'grid-4' ? 95 : 72}
+                                  level="M"
+                                  includeMargin={false}
+                                />
+                                <span className="font-mono text-[8px] font-bold text-slate-600 mt-1">
+                                  SCAN ABSEN
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Card Bottom Cut Guide */}
+                            <div className="pt-1.5 border-t border-slate-100 mt-2 flex items-center justify-between text-[8px] text-slate-400">
+                              <span className="flex items-center gap-1">
+                                <Scissors className="w-2.5 h-2.5" /> Gunting garis putus-putus
+                              </span>
+                              <span>Kartu Presensi Siswa</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Page Footer */}
+                    <div className="pt-3 border-t border-slate-200 text-center text-[10px] text-slate-400">
+                      {bimbelName} • {bimbelTagline} • Cetak dengan kertas A4 tebal / laminasi untuk keawetan kartu.
+                    </div>
+                  </div>
+                ));
+              })()
+            )}
           </div>
         )}
       </div>
